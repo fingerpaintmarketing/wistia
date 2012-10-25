@@ -314,30 +314,28 @@ class Wistia_FT extends EE_Fieldtype
     {
         if ($options['ga']['enabled']) {
             return <<<HTML
-<script>
-  function gaFunc{$hashedId}() {
-    _gaq.push([
-        '_trackEvent',
-        '{$options['ga']['category']}',
-        '{$options['ga']['playaction']}',
-        '{$options['ga']['label']}',
-        '{$options['ga']['value']}',
-        '{$options['ga']['noninteraction']}'
-    ]);
-    wistiaEmbed.unbind('play', gaFunc{$hashedId});
-  }
-  wistiaEmbed.bind('play', gaFunc{$hashedId});
-  wistiaEmbed.bind('end', function () {
-    _gaq.push([
-        '_trackEvent',
-        '{$options['ga']['category']}',
-        '{$options['ga']['endaction']}',
-        '{$options['ga']['label']}',
-        '{$options['ga']['value']}',
-        '{$options['ga']['noninteraction']}'
-    ]);
-  });
-</script>
+function gaFunc{$hashedId}() {
+  _gaq.push([
+      '_trackEvent',
+      '{$options['ga']['category']}',
+      '{$options['ga']['playaction']}',
+      '{$options['ga']['label']}',
+      '{$options['ga']['value']}',
+      '{$options['ga']['noninteraction']}'
+  ]);
+  wistiaEmbed.unbind('play', gaFunc{$hashedId});
+}
+wistiaEmbed.bind('play', gaFunc{$hashedId});
+wistiaEmbed.bind('end', function () {
+  _gaq.push([
+      '_trackEvent',
+      '{$options['ga']['category']}',
+      '{$options['ga']['endaction']}',
+      '{$options['ga']['label']}',
+      '{$options['ga']['value']}',
+      '{$options['ga']['noninteraction']}'
+  ]);
+});
 HTML;
         } else {
             return '';
@@ -377,8 +375,6 @@ JS;
         }
     }
 
-
-
     /**
      * Embeds the video as a JS API embed.
      *
@@ -410,25 +406,35 @@ JS;
     data-video-width="{$options['width']}"
     data-video-height="{$options['height']}">&nbsp;
 </div>
-<script charset="ISO-8859-1" src="{$jsUrl}"></script>
 <script>
-wistiaEmbed = Wistia.embed("{$hashedId}", {
-  version: "v1",
-  videoWidth: {$options['width']},
-  videoHeight: {$options['height']},
-  playButton: {$options['playButton']},
-  smallPlayButton: {$options['smallPlayButton']},
-  playbar: {$options['playbar']},
-  volumeControl: {$options['volumeControl']},
-  fullscreenButton: {$options['fullscreenButton']},
-  controlsVisibleOnLoad: {$options['controlsVisibleOnLoad']},
-  playerColor: '{$options['playerColor']}',
-  autoPlay: {$options['autoPlay']},
-  endVideoBehavior: '{$options['endVideoBehavior']}'
-});
-{$socialBar}
+  function wistiaInit() {
+    wistiaEmbed = Wistia.embed("{$hashedId}", {
+      version: "v1",
+      videoWidth: {$options['width']},
+      videoHeight: {$options['height']},
+      playButton: {$options['playButton']},
+      smallPlayButton: {$options['smallPlayButton']},
+      playbar: {$options['playbar']},
+      volumeControl: {$options['volumeControl']},
+      fullscreenButton: {$options['fullscreenButton']},
+      controlsVisibleOnLoad: {$options['controlsVisibleOnLoad']},
+      playerColor: '{$options['playerColor']}',
+      autoPlay: {$options['autoPlay']},
+      endVideoBehavior: '{$options['endVideoBehavior']}'
+    });
+    {$socialBar}
+    {$ga}
+  }
+  var wistiaScript = document.createElement('script');
+  wistiaScript.onreadystatechange = function () {
+      if (this.readyState == 'complete') {
+          wistiaInit();
+      }
+  }
+  wistiaScript.onload = wistiaInit;
+  wistiaScript.src = '{$jsUrl}';
+  document.getElementsByTagName('head')[0].appendChild(wistiaScript);
 </script>
-{$ga}
 HTML;
     }
 
