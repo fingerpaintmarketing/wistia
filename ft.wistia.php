@@ -174,17 +174,23 @@ class Wistia_FT extends EE_Fieldtype
      */
     private function _getVideos()
     {
-        $videos   = array('' => '-- Select --');
         $projects = $this->settings['projects'];
+        $projectNames = $this->_getProjects();
         foreach ($projects as $project) {
             $params = array('sort_by' => 'name', 'project_id' => $project);
             $data   = $this->_getApiData('videos', $project, $params);
             foreach ($data as $video) {
-                $id   = valueOf('id', $video);
-                $name = valueOf('name', $video);
-                $videos[$id] = $name;
+                $id      = valueOf('id', $video);
+                $name    = valueOf('name', $video);
+                $section = valueOf('section', $video);
+                if ($section) {
+                    $videos[$section][$id] = $name;
+                } else {
+                    $videos[$id] = $name;
+                }
             }
         }
+        ksort($videos);
         return $videos;
     }
 
