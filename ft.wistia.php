@@ -622,7 +622,13 @@ HTML;
     public function replace_tag_catchall(
         $data, $params = array(), $tagdata = false, $modifier = ''
     ) {
-        return valueOf($modifier, $this->_getApiData('video', $data));
+        $apiData = valueOf($modifier, $this->_getApiData('video', $data));
+        if (valueOf('striptags', $params) == 'true') {
+            $apiData = strip_tags($apiData);
+            $apiData = htmlentities($apiData, ENT_QUOTES|ENT_HTML5, 'UTF-8', false);
+            $apiData = trim($apiData);
+        }
+        return $apiData;
     }
 
     /**

@@ -205,7 +205,11 @@ To override the defaults, use **<code>ga:parametername="value"</code>**. The par
 
 ## Embedding Video Attributes
 
-To embed video attributes, such as the name or description, use **<code>{wistia:attributename}</code>**. The attributes available for use are as follows:
+To embed video attributes, such as the name or description, use **<code>{wistia:attributename}</code>**.
+
+You can strip out HTML tags and automatically encode HTML entities from the attribute output by adding **<code>striptags="true"</code>** to the tag.
+
+The attributes available for use are as follows:
 
 <table>
   <tr>
