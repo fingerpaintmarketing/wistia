@@ -9,7 +9,7 @@
 
 ## Installation & Configuration
 
-1. Place the **<code>wistia</code>** folder in your **<code>/system/expressionengine/third_party</code>** folder.
+1. Place the **wistia** folder in your **/system/expressionengine/third_party** folder.
 2. Log in to the CP.
 3. Click **Add-Ons > Fieldtypes**.
 4. Scroll to the bottom and click **Install** on the **Wistia** line.
@@ -26,7 +26,7 @@
 ## Embedding a Video
 
 1. After you have chosen the video you want on the **Publish** page, you can embed the video using an ExpressionEngine tag in the template.
-2. Let's assume that your field name is **<code>wistia</code>**. For a basic iframe video embed using the default options, simply enter **<code>{wistia}</code>**.
+2. Let's assume that your field name is <code>wistia</code>. For a basic iframe video embed using the default options, simply enter <code>{wistia}</code>.
 3. For more advanced usage, you can specify parameters for the embed as follows:
 
 <table>
@@ -118,7 +118,7 @@
 
 ## Adding the Social Sharing Bar
 
-To enable the social sharing bar, add **<code>socialbar="twitter|reddit|facebook"</code>** to your Wistia tag, and customize it with a pipe-delimited ordered list of social buttons from the table below.
+To enable the social sharing bar, add <code>socialbar="twitter|reddit|facebook"</code> to your Wistia tag, and customize it with a pipe-delimited ordered list of social buttons from the table below.
 
 The logo that will appear on social sites, as well as the target of the link, can also be customized. See below for details.
 
@@ -152,11 +152,11 @@ The logo that will appear on social sites, as well as the target of the link, ca
 
 ## Adding Google Analytics Tracking
 
-Embedding Google Analytics requires that the tag is called with **<code>type="api"</code>**.
+Embedding Google Analytics requires that the tag is called with <code>type="api"</code>.
 
-When using the tag, simply setting **<code>ga="true"</code>** will set up Google Analytics events on play and end with the default settings.
+When using the tag, simply setting <code>ga="true"</code> will set up Google Analytics events on play and end with the default settings.
 
-To override the defaults, use **<code>ga:parametername="value"</code>**. The parameters available for use are as follows:
+To override the defaults, use <code>ga:parametername="value"</code>. The parameters available for use are as follows:
 
 <table>
   <tr>
@@ -205,9 +205,9 @@ To override the defaults, use **<code>ga:parametername="value"</code>**. The par
 
 ## Embedding Video Attributes
 
-To embed video attributes, such as the name or description, use **<code>{wistia:attributename}</code>**.
+To embed video attributes, such as the name or description, use <code>{wistia:attributename}</code>.
 
-You can strip out HTML tags and automatically encode HTML entities from the attribute output by adding **<code>striptags="true"</code>** to the tag.
+You can strip out HTML tags and automatically encode HTML entities from the attribute output by adding <code>striptags="true"</code> to the tag.
 
 The attributes available for use are as follows:
 
@@ -260,9 +260,9 @@ The attributes available for use are as follows:
 
 ## Embedding Thumbnails
 
-To embed a thumbnail, use **<code>{wistia:thumbnail}</code>**
+To embed a thumbnail, use <code>{wistia:thumbnail}</code>
 
-To specify the size of the thumbnail, use **<code>{wistia:thumbnail height="90" width="160"}</code>**
+To specify the size of the thumbnail, use <code>{wistia:thumbnail height="90" width="160"}</code>
 
 ## Licensing
 
