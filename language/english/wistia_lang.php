@@ -20,12 +20,16 @@ if (!defined('EXT')) {
 }
 
 $lang = array(
+    'api_access_error' => 'Error fetching API data.',
     'api_key' => 'API Key',
     'api_key_desc' => 'Your Wistia API key.',
+    'no_videos_error' => 'There are no videos in the projects you selected.',
     'preference' => 'Preference',
+    'project_list_error' => 'Could not load project list. Is your API key correct?',
     'projects' => 'Projects',
     'projects_desc' => 'Project(s) available to select videos from.',
     'setting' => 'Setting',
+    'video_list_error' => 'Could not load video list. Did you select any projects?',
 );
 
 ?>

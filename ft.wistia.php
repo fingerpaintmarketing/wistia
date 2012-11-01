@@ -44,7 +44,7 @@ class Wistia_FT extends EE_Fieldtype
      */
     public $info = array(
         'name' => 'Wistia',
-        'version' => '0.1.3',
+        'version' => '0.1.4',
     );
 
     /**
@@ -100,6 +100,11 @@ class Wistia_FT extends EE_Fieldtype
         $apiKey  = $this->settings['api_key'];
         $baseUrl = 'https://api:' . $apiKey . '@api.wistia.com/v1/';
 
+        /** Fail if no API key defined. */
+        if (!$apiKey) {
+            return false;
+        }
+
         /** Get API parameter URL string to append to the end. */
         $urlParams = '';
         if (count($params) > 0) {
@@ -142,8 +147,21 @@ class Wistia_FT extends EE_Fieldtype
      */
     private function _getField($data, $fieldName)
     {
+        /** Load language file for error messages. */
+        $this->EE->lang->loadfile('wistia');
+
         /** Get option list using API and leveraging API key set globally. */
         $options = $this->_getVideos();
+
+        /** Fail if not able to get video list. */
+        if (!is_array($options)) {
+            return lang('video_list_error');
+        }
+
+        /** Fail on no available videos. */
+        if (count($options) == 0) {
+            return lang('no_videos_error');
+        }
 
         /** Get selected item, if any. */
         if ($data) {
@@ -183,11 +201,19 @@ class Wistia_FT extends EE_Fieldtype
         $projects = array();
         $params   = array('sort_by' => 'name');
         $data     = $this->_getApiData('projects', '', $params);
+
+        /** Fail if no data. */
+        if (!is_array($data)) {
+            return false;
+        }
+
+        /** Add each project. */
         foreach ($data as $project) {
             $id   = valueOf('id', $project);
             $name = valueOf('name', $project);
             $projects[$id] = $name;
         }
+
         return $projects;
     }
 
@@ -201,17 +227,32 @@ class Wistia_FT extends EE_Fieldtype
     {
         $projects = $this->settings['projects'];
         $projectNames = $this->_getProjects();
+
+        /** If no defined projects, fail out. */
+        if (!is_array($projects) || !is_array($projectNames)) {
+            return false;
+        }
+
+        /** Add videos from each project. */
+        $videos = array();
         foreach ($projects as $project) {
             $params = array('sort_by' => 'name', 'project_id' => $project);
             $data   = $this->_getApiData('videos', $project, $params);
+
+            /** Skip empty datasets. */
+            if (!is_array($data)) {
+                continue;
+            }
+
+            /** Add each video. */
             foreach ($data as $video) {
                 $id      = valueOf('id', $video);
                 $name    = valueOf('name', $video);
                 $section = valueOf('section', $video);
                 if ($section) {
-                    $videos[$section][$id] = $name;
+                    $videos[$projectNames[$project]][$section][$id] = $name;
                 } else {
-                    $videos[$id] = $name;
+                    $videos[$projectNames[$project]][$id] = $name;
                 }
             }
         }
@@ -530,6 +571,11 @@ HTML;
         /** Get option list using API and leveraging API key set globally. */
         $options  = $this->_getProjects();
 
+        /** Fail on no projects. */
+        if (!is_array($options)) {
+            return lang('project_list_error');
+        }
+
         /** Gets selected elements, or empty array if none exist. */
         if (array_key_exists('projects', $data)) {
             $selected = $data['projects'];
@@ -604,6 +650,11 @@ HTML;
         /** Get option list using API and leveraging API key set globally. */
         $options  = $this->_getProjects();
 
+        /** Fail on no projects. */
+        if (!is_array($options)) {
+            return lang('project_list_error');
+        }
+
         /** Gets selected elements, or empty array if none exist. */
         if (array_key_exists('projects', $data)) {
             $selected = $data['projects'];
@@ -645,8 +696,14 @@ HTML;
      */
     public function replace_tag($data, $params = array(), $tagdata = false)
     {
+        /** Load language file for error messages. */
+        $this->EE->lang->loadfile('wistia');
+
         /** Get hashedId data from the API. */
         $apiData = $this->_getApiData('video', $data);
+        if (!is_array($apiData)) {
+            return lang('api_access_error');
+        }
         $hashedId = valueOf('hashed_id', $apiData);
 
         /** Build options array. */
@@ -681,7 +738,14 @@ HTML;
     public function replace_tag_catchall(
         $data, $params = array(), $tagdata = false, $modifier = ''
     ) {
+        /** Load language file for error messages. */
+        $this->EE->lang->loadfile('wistia');
+
+        /** Replace tag contents. */
         $apiData = valueOf($modifier, $this->_getApiData('video', $data));
+        if (!is_array($apiData)) {
+            return lang('api_access_error');
+        }
         if (valueOf('striptags', $params) == 'true') {
             $apiData = strip_tags($apiData);
             $apiData = htmlentities($apiData, ENT_QUOTES|ENT_HTML5, 'UTF-8', false);
@@ -702,8 +766,14 @@ HTML;
      */
     public function replace_thumbnail($data, $params = array(), $tagdata = false)
     {
+        /** Load language file for error messages. */
+        $this->EE->lang->loadfile('wistia');
+
         /** Get thumbnail data from the API. */
         $apiData = $this->_getApiData('video', $data);
+        if (!is_array($apiData)) {
+            return lang('api_access_error');
+        }
         $thumbnail = valueOf('url', valueOf('thumbnail', $apiData));
 
         /** Get height and width from parameters array. */
