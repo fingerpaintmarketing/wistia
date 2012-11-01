@@ -44,7 +44,7 @@ class Wistia_FT extends EE_Fieldtype
      */
     public $info = array(
         'name' => 'Wistia',
-        'version' => '0.1.2',
+        'version' => '0.1.3',
     );
 
     /**
@@ -129,6 +129,31 @@ class Wistia_FT extends EE_Fieldtype
 
         /** Return JSON-decoded stream. */
         return json_decode(file_get_contents($baseUrl), true);
+    }
+
+    /**
+     * Function to get the HTML for a dropdown for a Publish field.
+     *
+     * @param array  $data      Information about what is selected.
+     * @param string $fieldName The name of the form field to use.
+     *
+     * @access private
+     * @return string The HTML for the field.
+     */
+    private function _getField($data, $fieldName)
+    {
+        /** Get option list using API and leveraging API key set globally. */
+        $options = $this->_getVideos();
+
+        /** Get selected item, if any. */
+        if ($data) {
+            $selected = $data;
+        } else {
+            $selected = '';
+        }
+
+        /* Return the option list as a select dropdown. */
+        return form_dropdown($fieldName, $options, $selected);
     }
 
     /**
@@ -477,6 +502,51 @@ HTML;
     }
 
     /**
+     * Function to display a Matrix cell.
+     *
+     * @param array $data The value of the form field.
+     *
+     * @access public
+     * @return string The compiled form input HTML.
+     */
+    public function display_cell($data)
+    {
+        return $this->_getField($data, $this->cell_name);
+    }
+
+    /**
+     * Function to display individual cell settings on the Matrix channel field form.
+     *
+     * @param array $data Data about the form passed from EE.
+     *
+     * @access public
+     * @return void
+     */
+    public function display_cell_settings($data)
+    {
+        /** Load language file for field names and descriptions. */
+        $this->EE->lang->loadfile('wistia');
+
+        /** Get option list using API and leveraging API key set globally. */
+        $options  = $this->_getProjects();
+
+        /** Gets selected elements, or empty array if none exist. */
+        if (array_key_exists('projects', $data)) {
+            $selected = $data['projects'];
+        } else {
+            $selected = array();
+        }
+
+        /** Add multiselect populated with selected elements. */
+        return array(
+            array(
+                lang('projects'),
+                form_multiselect('projects[]', $options, $selected)
+            )
+        );
+    }
+
+    /**
      * Function to display the field.
      *
      * @param string $data The value of the form field.
@@ -486,18 +556,7 @@ HTML;
      */
     public function display_field($data)
     {
-        /** Get option list using API and leveraging API key set globally. */
-        $options  = $this->_getVideos();
-
-        /** Get selected item, if any. */
-        if ($data) {
-            $selected = $data;
-        } else {
-            $selected = '';
-        }
-
-        /* Return the option list as a select dropdown. */
-        return form_dropdown($this->field_name, $options, $selected);
+        return $this->_getField($data, $this->field_name);
     }
 
     /**
@@ -683,6 +742,20 @@ HTML;
     public function save_settings($data)
     {
         return array_merge($this->settings, $this->EE->input->post('wistia'));
+    }
+
+    /**
+     * Function to set datatypes on Matrix columns.
+     *
+     * @param array $data The data about the column that was inserted.
+     *
+     * @access public
+     * @return void
+     */
+    public function settings_modify_matrix_column($data)
+    {
+        $colId = 'col_id_' . $data['col_id'];
+        return array($colId => array('type' => 'text', 'default' => ''));
     }
 }
 
