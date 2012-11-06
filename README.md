@@ -37,25 +37,25 @@
     <th>Behavior</th>
   </tr>
   <tr>
-    <td>autoPlay</td>
+    <td>autoplay</td>
     <td>boolean</td>
     <td>false</td>
     <td>Whether the video starts playing automatically.</td>
   </tr>
   <tr>
-    <td>controlsVisibleOnLoad</td>
+    <td>controlsvisibleonload</td>
     <td>boolean</td>
     <td>true</td>
     <td>Whether the controls are visible before clicking on the video.</td>
   </tr>
   <tr>
-    <td>endVideoBehavior</td>
+    <td>endvideobehavior</td>
     <td>pause, reset, loop</td>
     <td>pause</td>
     <td>What to do when the video ends - pause the video, start it over at the beginning, or repeat the video on loop.</td>
   </tr>
   <tr>
-    <td>fullscreenButton</td>
+    <td>fullscreenbutton</td>
     <td>boolean</td>
     <td>true</td>
     <td>Whether to display the fullscreen button in the controls.</td>
@@ -73,19 +73,19 @@
     <td>Whether the playbar appears in the controls.</td>
   </tr>
   <tr>
-    <td>playButton</td>
+    <td>playbutton</td>
     <td>boolean</td>
     <td>true</td>
     <td>Whether the large play button appears in the middle of the video.</td>
   </tr>
   <tr>
-    <td>playerColor</td>
+    <td>playercolor</td>
     <td>hexcode</td>
     <td>636155</td>
     <td>A six-character hex color code used for the player controls.</td>
   </tr>
   <tr>
-    <td>smallPlayButton</td>
+    <td>smallplaybutton</td>
     <td>boolean</td>
     <td>true</td>
     <td>Whether to display the small play button in the controls.</td>
@@ -103,7 +103,7 @@
     <td>The type of embed. 'iframe' loads the video in an iframe, 'api' loads the video using JavaScript directly on the page, and 'popover' provides a link to load the video in an overlay.</td>
   </tr>
   <tr>
-    <td>volumeControl</td>
+    <td>volumecontrol</td>
     <td>boolean</td>
     <td>true</td>
     <td>Whether to display the volume control in the controls.</td>

@@ -44,8 +44,22 @@ class Wistia_FT extends EE_Fieldtype
      */
     public $info = array(
         'name' => 'Wistia',
-        'version' => '0.1.4',
+        'version' => '0.1.5',
     );
+
+    /**
+     * Constructor function.
+     *
+     * Calls the parent constructor and loads the language file.
+     *
+     * @access public
+     * @return void
+     */
+    public function __construct()
+    {
+        parent::__construct();
+        $this->EE->lang->loadfile('wistia');
+    }
 
     /**
      * Function to fix a relative URL and turn it into an absolute URL.
@@ -147,9 +161,6 @@ class Wistia_FT extends EE_Fieldtype
      */
     private function _getField($data, $fieldName)
     {
-        /** Load language file for error messages. */
-        $this->EE->lang->loadfile('wistia');
-
         /** Get option list using API and leveraging API key set globally. */
         $options = $this->_getVideos();
 
@@ -186,7 +197,7 @@ class Wistia_FT extends EE_Fieldtype
      */
     private function _getParam($needle, $haystack, $default)
     {
-        $value = valueOf($needle, $haystack);
+        $value = valueOf(strtolower($needle), $haystack);
         return ($value) ? $value : $default;
     }
 
@@ -258,6 +269,43 @@ class Wistia_FT extends EE_Fieldtype
         }
         ksort($videos);
         return $videos;
+    }
+
+    /**
+     * Function to replace any tag with a modifier with associated API data.
+     *
+     * @param array  $data     Tag data from the database.
+     * @param array  $params   Parameters from the tag.
+     * @param bool   $tagdata  The markup between the tag pairs.
+     * @param string $modifier The modifier text after the tag.
+     *
+     * @access public
+     * @return string The rendered HTML.
+     */
+    private function _replaceTagCatchall($data, $params, $tagdata, $modifier)
+    {
+        /** Lowercase params. */
+        $params = array_change_key_case($params, CASE_LOWER);
+
+        /** Get API data array. */
+        $apiData = $this->_getApiData('video', $data);
+
+        /** Fail on inability to pull API data array. */
+        if (!is_array($apiData)) {
+            return lang('api_access_error');
+        }
+
+        /** Extract tag from data array. */
+        $val = valueOf($modifier, $apiData);
+
+        /** Run striptags, if requested. */
+        if (valueOf('striptags', $params) == 'true') {
+            $val = strip_tags($val);
+            $val = htmlentities($val, ENT_QUOTES|ENT_HTML5, 'UTF-8', false);
+            $val = trim($val);
+        }
+
+        return $val;
     }
 
     /**
@@ -565,9 +613,6 @@ HTML;
      */
     public function display_cell_settings($data)
     {
-        /** Load language file for field names and descriptions. */
-        $this->EE->lang->loadfile('wistia');
-
         /** Get option list using API and leveraging API key set globally. */
         $options  = $this->_getProjects();
 
@@ -614,7 +659,6 @@ HTML;
     public function display_global_settings()
     {
         $val = array_merge($this->settings, $_POST);
-        $this->EE->lang->loadfile('wistia');
         $this->EE->load->library('table');
         $this->EE->table->set_heading(lang('preference'), lang('setting'));
         $this->EE->table->add_row(
@@ -644,9 +688,6 @@ HTML;
      */
     public function display_settings($data)
     {
-        /** Load language file for field names and descriptions. */
-        $this->EE->lang->loadfile('wistia');
-
         /** Get option list using API and leveraging API key set globally. */
         $options  = $this->_getProjects();
 
@@ -696,8 +737,8 @@ HTML;
      */
     public function replace_tag($data, $params = array(), $tagdata = false)
     {
-        /** Load language file for error messages. */
-        $this->EE->lang->loadfile('wistia');
+        /** Lowercase params. */
+        $params = array_change_key_case($params, CASE_LOWER);
 
         /** Get hashedId data from the API. */
         $apiData = $this->_getApiData('video', $data);
@@ -725,33 +766,153 @@ HTML;
     }
 
     /**
-     * Function to replace any tag with a modifier with associated API data.
+     * Function to replace the created modifier with API data.
      *
-     * @param array  $data     Tag data from the database.
-     * @param array  $params   Parameters from the tag.
-     * @param bool   $tagdata  The markup between the tag pairs.
-     * @param string $modifier The modifier text after the tag.
+     * @param array $data    Tag data from the database.
+     * @param array $params  Parameters from the tag.
+     * @param bool  $tagdata The markup between the tag pairs.
      *
      * @access public
      * @return string The rendered HTML.
      */
-    public function replace_tag_catchall(
-        $data, $params = array(), $tagdata = false, $modifier = ''
-    ) {
-        /** Load language file for error messages. */
-        $this->EE->lang->loadfile('wistia');
+    public function replace_created($data, $params = array(), $tagdata = false)
+    {
+        return $this->_replaceTagCatchall($data, $params, $tagdata, 'created');
+    }
 
-        /** Replace tag contents. */
-        $apiData = valueOf($modifier, $this->_getApiData('video', $data));
-        if (!is_array($apiData)) {
-            return lang('api_access_error');
-        }
-        if (valueOf('striptags', $params) == 'true') {
-            $apiData = strip_tags($apiData);
-            $apiData = htmlentities($apiData, ENT_QUOTES|ENT_HTML5, 'UTF-8', false);
-            $apiData = trim($apiData);
-        }
-        return $apiData;
+    /**
+     * Function to replace the description modifier with API data.
+     *
+     * @param array $data    Tag data from the database.
+     * @param array $params  Parameters from the tag.
+     * @param bool  $tagdata The markup between the tag pairs.
+     *
+     * @access public
+     * @return string The rendered HTML.
+     */
+    public function replace_description($data, $params = array(), $tagdata = false)
+    {
+        return $this->_replaceTagCatchall($data, $params, $tagdata, 'description');
+    }
+
+    /**
+     * Function to replace the duration modifier with API data.
+     *
+     * @param array $data    Tag data from the database.
+     * @param array $params  Parameters from the tag.
+     * @param bool  $tagdata The markup between the tag pairs.
+     *
+     * @access public
+     * @return string The rendered HTML.
+     */
+    public function replace_duration($data, $params = array(), $tagdata = false)
+    {
+        return $this->_replaceTagCatchall($data, $params, $tagdata, 'duration');
+    }
+
+    /**
+     * Function to replace the hashed_id modifier with API data.
+     *
+     * @param array $data    Tag data from the database.
+     * @param array $params  Parameters from the tag.
+     * @param bool  $tagdata The markup between the tag pairs.
+     *
+     * @access public
+     * @return string The rendered HTML.
+     */
+    public function replace_hashed_id($data, $params = array(), $tagdata = false)
+    {
+        return $this->_replaceTagCatchall($data, $params, $tagdata, 'hashed_id');
+    }
+
+    /**
+     * Function to replace the id modifier with API data.
+     *
+     * @param array $data    Tag data from the database.
+     * @param array $params  Parameters from the tag.
+     * @param bool  $tagdata The markup between the tag pairs.
+     *
+     * @access public
+     * @return string The rendered HTML.
+     */
+    public function replace_id($data, $params = array(), $tagdata = false)
+    {
+        return $this->_replaceTagCatchall($data, $params, $tagdata, 'id');
+    }
+
+    /**
+     * Function to replace the name modifier with API data.
+     *
+     * @param array $data    Tag data from the database.
+     * @param array $params  Parameters from the tag.
+     * @param bool  $tagdata The markup between the tag pairs.
+     *
+     * @access public
+     * @return string The rendered HTML.
+     */
+    public function replace_name($data, $params = array(), $tagdata = false)
+    {
+        return $this->_replaceTagCatchall($data, $params, $tagdata, 'name');
+    }
+
+    /**
+     * Function to replace the progress modifier with API data.
+     *
+     * @param array $data    Tag data from the database.
+     * @param array $params  Parameters from the tag.
+     * @param bool  $tagdata The markup between the tag pairs.
+     *
+     * @access public
+     * @return string The rendered HTML.
+     */
+    public function replace_progress($data, $params = array(), $tagdata = false)
+    {
+        return $this->_replaceTagCatchall($data, $params, $tagdata, 'progress');
+    }
+
+    /**
+     * Function to replace the section modifier with API data.
+     *
+     * @param array $data    Tag data from the database.
+     * @param array $params  Parameters from the tag.
+     * @param bool  $tagdata The markup between the tag pairs.
+     *
+     * @access public
+     * @return string The rendered HTML.
+     */
+    public function replace_section($data, $params = array(), $tagdata = false)
+    {
+        return $this->_replaceTagCatchall($data, $params, $tagdata, 'section');
+    }
+
+    /**
+     * Function to replace the type modifier with API data.
+     *
+     * @param array $data    Tag data from the database.
+     * @param array $params  Parameters from the tag.
+     * @param bool  $tagdata The markup between the tag pairs.
+     *
+     * @access public
+     * @return string The rendered HTML.
+     */
+    public function replace_type($data, $params = array(), $tagdata = false)
+    {
+        return $this->_replaceTagCatchall($data, $params, $tagdata, 'type');
+    }
+
+    /**
+     * Function to replace the updated modifier with API data.
+     *
+     * @param array $data    Tag data from the database.
+     * @param array $params  Parameters from the tag.
+     * @param bool  $tagdata The markup between the tag pairs.
+     *
+     * @access public
+     * @return string The rendered HTML.
+     */
+    public function replace_updated($data, $params = array(), $tagdata = false)
+    {
+        return $this->_replaceTagCatchall($data, $params, $tagdata, 'updated');
     }
 
     /**
@@ -766,8 +927,8 @@ HTML;
      */
     public function replace_thumbnail($data, $params = array(), $tagdata = false)
     {
-        /** Load language file for error messages. */
-        $this->EE->lang->loadfile('wistia');
+        /** Lowercase params. */
+        $params = array_change_key_case($params, CASE_LOWER);
 
         /** Get thumbnail data from the API. */
         $apiData = $this->_getApiData('video', $data);
