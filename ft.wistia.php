@@ -44,7 +44,7 @@ class Wistia_FT extends EE_Fieldtype
      */
     public $info = array(
         'name' => 'Wistia',
-        'version' => '0.1.5',
+        'version' => '0.1.6',
     );
 
     /**
@@ -173,6 +173,11 @@ class Wistia_FT extends EE_Fieldtype
         if (count($options) == 0) {
             return lang('no_videos_error');
         }
+
+        /** Add null item to beginning of array. */
+        $options = array_reverse($options, true);
+        $options[] = '-- Select --';
+        $options = array_reverse($options, true);
 
         /** Get selected item, if any. */
         if ($data) {
@@ -434,7 +439,7 @@ class Wistia_FT extends EE_Fieldtype
     {
         if ($options['ga']['enabled']) {
             return <<<HTML
-function gaFunc{$hashedId}() {
+function ga_{$hashedId}() {
   _gaq.push([
       '_trackEvent',
       '{$options['ga']['category']}',
@@ -443,10 +448,10 @@ function gaFunc{$hashedId}() {
       '{$options['ga']['value']}',
       '{$options['ga']['noninteraction']}'
   ]);
-  wistiaEmbed.unbind('play', gaFunc{$hashedId});
+  wistiaEmbed_{$hashedId}.unbind('play', ga_{$hashedId});
 }
-wistiaEmbed.bind('play', gaFunc{$hashedId});
-wistiaEmbed.bind('end', function () {
+wistiaEmbed_{$hashedId}.bind('play', ga_{$hashedId});
+wistiaEmbed_{$hashedId}.bind('end', function () {
   _gaq.push([
       '_trackEvent',
       '{$options['ga']['category']}',
@@ -465,12 +470,13 @@ HTML;
     /**
      * Function to return the Social Sharing script, if needed.
      *
-     * @param array $options The options array, built from the tag params.
+     * @param string $hashedId The hashed ID for the video.
+     * @param array  $options The options array, built from the tag params.
      *
      * @access private
      * @return string  The social sharing script, if requested, otherwise blank.
      */
-    private function _seApiGetSocialBar($options)
+    private function _seApiGetSocialBar($hashedId, $options)
     {
         if ($options['socialbar']['enabled']) {
             $badgeUrl = ($options['socialbar']['badgeurl'])
@@ -485,7 +491,7 @@ HTML;
                 : '';
 
             return <<<JS
-Wistia.plugin.socialbar(wistiaEmbed, {
+Wistia.plugin.socialbar(wistiaEmbed_{$hashedId}, {
   version: "v1",
   buttons: "{$options['socialbar']['buttons']}"{$badgeUrl}{$badgeImage}{$pageUrl}
 });
@@ -507,16 +513,13 @@ JS;
     private function _superEmbedApi($hashedId, $options)
     {
         /** Get supplemental blocks. */
-        $socialBar = $this->_seApiGetSocialBar($options);
+        $socialBar = $this->_seApiGetSocialBar($hashedId, $options);
         $ga = $this->_seApiGetGoogleAnalytics($hashedId, $options);
 
         /** Builds JS URL. */
         $jsUrl = ($options['ssl']) ? 'https' : 'http';
-        $jsUrl .= '://fast.wistia.com/static/concat/E-v1';
-        if (strlen($socialBar) > 0) {
-            $jsUrl .= '%2Csocialbar-v1';
-        }
-        $jsUrl .= '.js';
+        $jsUrl .= '://fast.wistia.com/static/concat/E-v1'
+            . '%2Csocialbar-v1%2CpostRoll-v1%2CrequireEmail-v1.js';
 
         /** Return rendered SuperEmbed template. */
         return <<<HTML
@@ -527,8 +530,23 @@ JS;
     data-video-height="{$options['height']}">&nbsp;
 </div>
 <script>
-  function wistiaInit() {
-    wistiaEmbed = Wistia.embed("{$hashedId}", {
+  /** Load Wistia JS, if not already loaded. */
+  if (typeof wistiaScript === 'undefined') {
+    var wistiaScript = document.createElement('script');
+    wistiaScript.src = '{$jsUrl}';
+    document.getElementsByTagName('head')[0].appendChild(wistiaScript);
+  }
+
+  /** Function to initialize this video. */
+  function wistiaInit_{$hashedId}() {
+    /** Check to see if the Wistia lib is loaded. Else, wait 100ms and try again. */
+    if (typeof Wistia === 'undefined') {
+        setTimeout(wistiaInit_{$hashedId}, 100);
+        return;
+    }
+
+    /** Process the embed. */
+    wistiaEmbed_{$hashedId} = Wistia.embed("{$hashedId}", {
       version: "v1",
       videoWidth: {$options['width']},
       videoHeight: {$options['height']},
@@ -545,15 +563,9 @@ JS;
     {$socialBar}
     {$ga}
   }
-  var wistiaScript = document.createElement('script');
-  wistiaScript.onreadystatechange = function () {
-      if (this.readyState == 'complete') {
-          wistiaInit();
-      }
-  }
-  wistiaScript.onload = wistiaInit;
-  wistiaScript.src = '{$jsUrl}';
-  document.getElementsByTagName('head')[0].appendChild(wistiaScript);
+
+  /** Call up the function to initialize this video. */
+  wistiaInit_{$hashedId}();
 </script>
 HTML;
     }
