@@ -306,7 +306,7 @@ class Wistia_FT extends EE_Fieldtype
         /** Run striptags, if requested. */
         if (valueOf('striptags', $params) == 'true') {
             $val = strip_tags($val);
-            $val = htmlentities($val, ENT_QUOTES|ENT_HTML5, 'UTF-8', false);
+            $val = htmlentities($val, ENT_QUOTES, 'UTF-8', false);
             $val = trim($val);
         }
 
