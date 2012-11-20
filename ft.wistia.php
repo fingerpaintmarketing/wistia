@@ -111,6 +111,10 @@ class Wistia_FT extends EE_Fieldtype
      * @param string $id     The ID to use for lookup.
      * @param array  $params Additional parameters to append to the request.
      *
+     * @throws Exception If no API key is defined.
+     * @throws Exception If video data is requested with an id that is blank or 0.
+     * @throws Exception If unable to download the JSON data from the API provider.
+     *
      * @access private
      * @return string The formatted URL.
      */
@@ -122,7 +126,7 @@ class Wistia_FT extends EE_Fieldtype
 
         /** Fail if no API key defined. */
         if (!$apiKey) {
-            throw new Exception(lang('error0'), 0);
+            throw new Exception(lang('error_no_api_key'), 0);
         }
 
         /** Get API parameter URL string to append to the end. */
@@ -144,7 +148,7 @@ class Wistia_FT extends EE_Fieldtype
         case 'video':
             if (strlen($id) == 0 || $id == 0) {
                 /** Fail if ID is undefined or zero. */
-                throw new Exception(lang('error2') . "'$id'", 2);
+                throw new Exception(lang('error_invalid_videoid') . "'$id'", 2);
             } else {
                 $baseUrl .= 'medias/' . $id . '.json' . $urlParams;
             }
@@ -157,7 +161,7 @@ class Wistia_FT extends EE_Fieldtype
         /** Return JSON-decoded stream. */
         $jsonData = @file_get_contents($baseUrl);
         if ($jsonData === false) {
-            throw new Exception(lang('error3') . $baseUrl, 3);
+            throw new Exception(lang('error_remote_file') . $baseUrl, 3);
         } else {
             return json_decode($jsonData, true);
         }
@@ -179,17 +183,17 @@ class Wistia_FT extends EE_Fieldtype
             $videos = $this->_getVideos();
         } catch (Exception $e) {
             $this->_logException($e);
-            return lang('video_list_error');
+            return lang('error_empty_video_list');
         }
 
         /** Fail on no projects selected. */
         if (!is_array($videos)) {
-            return lang('video_list_error');
+            return lang('error_empty_video_list');
         }
 
         /** Fail on no available videos. */
         if (count($videos) == 0) {
-            return lang('no_videos_error');
+            return lang('error_no_videos_in_project');
         }
 
         /** Re-organize video multi-dimensional array into options. */
@@ -243,6 +247,8 @@ class Wistia_FT extends EE_Fieldtype
     /**
      * Function to get an array of available projects given an API key.
      *
+     * @throws Exception If unable to retrieve a list of projects from the API.
+     *
      * @access private
      * @return array
      */
@@ -255,7 +261,7 @@ class Wistia_FT extends EE_Fieldtype
         try {
             $data = $this->_getApiData('projects', '', $params);
         } catch (Exception $e) {
-            throw new Exception(lang('error1'), 1, $e);
+            throw new Exception(lang('error_no_projects'), 1, $e);
         }
 
         /** Add each project. */
@@ -271,6 +277,9 @@ class Wistia_FT extends EE_Fieldtype
     /**
      * Function to get an array of available videos given API key and project list.
      *
+     * @throws Exception If unable to get a list of projects from the API.
+     * @throws Exception If unable to get a list of videos for a project.
+     *
      * @access private
      * @return array
      */
@@ -282,7 +291,7 @@ class Wistia_FT extends EE_Fieldtype
         try {
             $projectNames = $this->_getProjects();
         } catch (Exception $e) {
-            throw new Exception(lang('error4'), 4, $e);
+            throw new Exception(lang('error_no_projects'), 1, $e);
         }
 
         /** If no defined projects, fail out. */
@@ -299,7 +308,7 @@ class Wistia_FT extends EE_Fieldtype
             try {
                 $data = $this->_getApiData('videos', $project, $params);
             } catch (Exception $e) {
-                throw new Exception(lang('error5') . $project, 5, $e);
+                throw new Exception(lang('error_no_video_list') . $project, 5, $e);
             }
 
             /** Skip empty datasets. */
@@ -337,7 +346,7 @@ class Wistia_FT extends EE_Fieldtype
         $message = '';
         do {
             $message .= nl2br(
-                lang('error') . $e->getMessage() . '<br>'
+                lang('error_prefix') . $e->getMessage() . '<br>'
                 . 'Code: ' . $e->getCode() . '<br>'
                 . 'File: ' . $e->getFile() . '<br>'
                 . 'Line: ' . $e->getLine() . '<br>'
@@ -701,7 +710,7 @@ HTML;
             $options  = $this->_getProjects();
         } catch (Exception $e) {
             $this->_logException($e);
-            return lang('error1');
+            return lang('error_no_projects');
         }
 
         /** Gets selected elements, or empty array if none exist. */
@@ -776,7 +785,7 @@ HTML;
             $options  = $this->_getProjects();
         } catch (Exception $e) {
             $this->_logException($e);
-            return lang('error1');
+            return lang('error_no_projects');
         }
 
         /** Gets selected elements, or empty array if none exist. */
@@ -828,7 +837,7 @@ HTML;
             $apiData = $this->_getApiData('video', $data);
         } catch (Exception $e) {
             $this->_logException($e);
-            return lang('api_access_error');
+            return lang('error_no_api_access');
         }
 
         /** Extract the hashed ID of the video from the API data. */
