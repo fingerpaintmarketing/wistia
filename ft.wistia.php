@@ -44,7 +44,7 @@ class Wistia_FT extends EE_Fieldtype
      */
     public $info = array(
         'name' => 'Wistia',
-        'version' => '0.1.6',
+        'version' => '0.1.7',
     );
 
     /**
@@ -58,7 +58,12 @@ class Wistia_FT extends EE_Fieldtype
     public function __construct()
     {
         parent::__construct();
+
+        /** Grants class-level access to the language file for this fieldtype. */
         $this->EE->lang->loadfile('wistia');
+
+        /** Loads the Logger library for writing to the EE developer log. */
+        $this->EE->load->library('logger');
     }
 
     /**
@@ -95,6 +100,7 @@ class Wistia_FT extends EE_Fieldtype
         if (substr($baseUrl, -1) != '/') {
             $baseUrl .= '/';
         }
+
         return $baseUrl . $url;
     }
 
@@ -116,7 +122,7 @@ class Wistia_FT extends EE_Fieldtype
 
         /** Fail if no API key defined. */
         if (!$apiKey) {
-            return false;
+            throw new Exception(lang('error0'), 0);
         }
 
         /** Get API parameter URL string to append to the end. */
@@ -130,16 +136,18 @@ class Wistia_FT extends EE_Fieldtype
         }
 
         /** Pull API data based on target. */
-        switch($target) {
-        case 'embed':
-            $baseUrl .= 'medias/' . $id . '/embed' . $urlParams;
-            return file_get_contents($baseUrl);
-            break;
+        switch ($target)
+        {
         case 'projects':
             $baseUrl .= 'projects.json' . $urlParams;
             break;
         case 'video':
-            $baseUrl .= 'medias/' . $id . '.json' . $urlParams;
+            if (strlen($id) == 0 || $id == 0) {
+                /** Fail if ID is undefined or zero. */
+                throw new Exception(lang('error2') . "'$id'", 2);
+            } else {
+                $baseUrl .= 'medias/' . $id . '.json' . $urlParams;
+            }
             break;
         case 'videos':
             $baseUrl .= 'medias.json' . $urlParams;
@@ -147,7 +155,12 @@ class Wistia_FT extends EE_Fieldtype
         }
 
         /** Return JSON-decoded stream. */
-        return json_decode(file_get_contents($baseUrl), true);
+        $jsonData = @file_get_contents($baseUrl);
+        if ($jsonData === false) {
+            throw new Exception(lang('error3') . $baseUrl, 3);
+        } else {
+            return json_decode($jsonData, true);
+        }
     }
 
     /**
@@ -161,23 +174,44 @@ class Wistia_FT extends EE_Fieldtype
      */
     private function _getField($data, $fieldName)
     {
-        /** Get option list using API and leveraging API key set globally. */
-        $options = $this->_getVideos();
+        /** Try to get the list of videos from the API. */
+        try {
+            $videos = $this->_getVideos();
+        } catch (Exception $e) {
+            $this->_logException($e);
+            return lang('video_list_error');
+        }
 
-        /** Fail if not able to get video list. */
-        if (!is_array($options)) {
+        /** Fail on no projects selected. */
+        if (!is_array($videos)) {
             return lang('video_list_error');
         }
 
         /** Fail on no available videos. */
-        if (count($options) == 0) {
+        if (count($videos) == 0) {
             return lang('no_videos_error');
         }
 
-        /** Add null item to beginning of array. */
-        $options = array_reverse($options, true);
-        $options[] = '-- Select --';
-        $options = array_reverse($options, true);
+        /** Re-organize video multi-dimensional array into options. */
+        $options = array('-- Select --');
+        foreach ($videos as $projectName => &$project) {
+            if (is_array($project)) {
+                foreach ($project as $sectionName => $section) {
+                    if (is_array($section)) {
+                        $sectionKey = 'section-' . $sectionName;
+                        $options[$projectName][$sectionKey] = "[$sectionName]";
+                        foreach ($section as $videoId => $videoName) {
+                            $options[$projectName][$videoId]
+                                = '&nbsp;&nbsp;&nbsp;&nbsp;' . $videoName;
+                        }
+                    } else {
+                        $options[$projectName][$sectionName] = $section;
+                    }
+                }
+            } else {
+                $options[$projectName] = $project;
+            }
+        }
 
         /** Get selected item, if any. */
         if ($data) {
@@ -216,11 +250,12 @@ class Wistia_FT extends EE_Fieldtype
     {
         $projects = array();
         $params   = array('sort_by' => 'name');
-        $data     = $this->_getApiData('projects', '', $params);
 
-        /** Fail if no data. */
-        if (!is_array($data)) {
-            return false;
+        /** Try to get API data. */
+        try {
+            $data = $this->_getApiData('projects', '', $params);
+        } catch (Exception $e) {
+            throw new Exception(lang('error1'), 1, $e);
         }
 
         /** Add each project. */
@@ -242,7 +277,13 @@ class Wistia_FT extends EE_Fieldtype
     private function _getVideos()
     {
         $projects = $this->settings['projects'];
-        $projectNames = $this->_getProjects();
+
+        /** Try to get project names. */
+        try {
+            $projectNames = $this->_getProjects();
+        } catch (Exception $e) {
+            throw new Exception(lang('error4'), 4, $e);
+        }
 
         /** If no defined projects, fail out. */
         if (!is_array($projects) || !is_array($projectNames)) {
@@ -253,7 +294,13 @@ class Wistia_FT extends EE_Fieldtype
         $videos = array();
         foreach ($projects as $project) {
             $params = array('sort_by' => 'name', 'project_id' => $project);
-            $data   = $this->_getApiData('videos', $project, $params);
+
+            /** Try to get a list of videos for this project. */
+            try {
+                $data = $this->_getApiData('videos', $project, $params);
+            } catch (Exception $e) {
+                throw new Exception(lang('error5') . $project, 5, $e);
+            }
 
             /** Skip empty datasets. */
             if (!is_array($data)) {
@@ -277,6 +324,30 @@ class Wistia_FT extends EE_Fieldtype
     }
 
     /**
+     * Function to log an exception.
+     *
+     * @param Exception $e The exception to log.
+     *
+     * @access private
+     * @return void
+     */
+    private function _logException($e)
+    {
+        /** Log the exception to the developer log. */
+        $message = '';
+        do {
+            $message .= nl2br(
+                lang('error') . $e->getMessage() . '<br>'
+                . 'Code: ' . $e->getCode() . '<br>'
+                . 'File: ' . $e->getFile() . '<br>'
+                . 'Line: ' . $e->getLine() . '<br>'
+                . 'Trace: ' . $e->getTraceAsString() . '<br><br>'
+            );
+        } while ($e = $e->getPrevious());
+        $this->EE->logger->developer($message, true);
+    }
+
+    /**
      * Function to replace any tag with a modifier with associated API data.
      *
      * @param array  $data     Tag data from the database.
@@ -292,12 +363,12 @@ class Wistia_FT extends EE_Fieldtype
         /** Lowercase params. */
         $params = array_change_key_case($params, CASE_LOWER);
 
-        /** Get API data array. */
-        $apiData = $this->_getApiData('video', $data);
-
-        /** Fail on inability to pull API data array. */
-        if (!is_array($apiData)) {
-            return lang('api_access_error');
+        /** Try to get API data. */
+        try {
+            $apiData = $this->_getApiData('video', $data);
+        } catch (Exception $e) {
+            $this->_logException($e);
+            return false;
         }
 
         /** Extract tag from data array. */
@@ -471,7 +542,7 @@ HTML;
      * Function to return the Social Sharing script, if needed.
      *
      * @param string $hashedId The hashed ID for the video.
-     * @param array  $options The options array, built from the tag params.
+     * @param array  $options  The options array, built from the tag params.
      *
      * @access private
      * @return string  The social sharing script, if requested, otherwise blank.
@@ -625,12 +696,12 @@ HTML;
      */
     public function display_cell_settings($data)
     {
-        /** Get option list using API and leveraging API key set globally. */
-        $options  = $this->_getProjects();
-
-        /** Fail on no projects. */
-        if (!is_array($options)) {
-            return lang('project_list_error');
+        /** Try to get the list of projects. */
+        try {
+            $options  = $this->_getProjects();
+        } catch (Exception $e) {
+            $this->_logException($e);
+            return lang('error1');
         }
 
         /** Gets selected elements, or empty array if none exist. */
@@ -700,12 +771,12 @@ HTML;
      */
     public function display_settings($data)
     {
-        /** Get option list using API and leveraging API key set globally. */
-        $options  = $this->_getProjects();
-
-        /** Fail on no projects. */
-        if (!is_array($options)) {
-            return lang('project_list_error');
+        /** Try to get project list. */
+        try {
+            $options  = $this->_getProjects();
+        } catch (Exception $e) {
+            $this->_logException($e);
+            return lang('error1');
         }
 
         /** Gets selected elements, or empty array if none exist. */
@@ -752,11 +823,15 @@ HTML;
         /** Lowercase params. */
         $params = array_change_key_case($params, CASE_LOWER);
 
-        /** Get hashedId data from the API. */
-        $apiData = $this->_getApiData('video', $data);
-        if (!is_array($apiData)) {
+        /** Try to get video data from the API. */
+        try {
+            $apiData = $this->_getApiData('video', $data);
+        } catch (Exception $e) {
+            $this->_logException($e);
             return lang('api_access_error');
         }
+
+        /** Extract the hashed ID of the video from the API data. */
         $hashedId = valueOf('hashed_id', $apiData);
 
         /** Build options array. */
@@ -772,7 +847,7 @@ HTML;
             return $this->_superEmbedPopover($hashedId, $options);
         case 'api':
             return $this->_superEmbedApi($hashedId, $options);
-        case 'iframe':
+        default:
             return $this->_superEmbedIframe($hashedId, $options);
         }
     }
@@ -942,11 +1017,15 @@ HTML;
         /** Lowercase params. */
         $params = array_change_key_case($params, CASE_LOWER);
 
-        /** Get thumbnail data from the API. */
-        $apiData = $this->_getApiData('video', $data);
-        if (!is_array($apiData)) {
-            return lang('api_access_error');
+        /** Try to get API data. */
+        try {
+            $apiData = $this->_getApiData('video', $data);
+        } catch (Exception $e) {
+            $this->_logException($e);
+            return false;
         }
+
+        /** Extract the thumbnail URL from the API data. */
         $thumbnail = valueOf('url', valueOf('thumbnail', $apiData));
 
         /** Get height and width from parameters array. */
@@ -961,6 +1040,23 @@ HTML;
 
         /** Otherwise, return URL as-is. */
         return $thumbnail;
+    }
+
+    /**
+     * Function to save an entry on the Publish page.
+     *
+     * @param string $data The data to save.
+     *
+     * @access public
+     * @return string The data to save.
+     */
+    public function save($data)
+    {
+        if (substr($data, 0, strlen('section-')) == 'section-') {
+            return '';
+        } else {
+            return $data;
+        }
     }
 
     /**

@@ -20,16 +20,36 @@ if (!defined('EXT')) {
 }
 
 $lang = array(
-    'api_access_error' => 'Error fetching API data.',
-    'api_key' => 'API Key',
-    'api_key_desc' => 'Your Wistia API key.',
-    'no_videos_error' => 'There are no videos in the projects you selected.',
-    'preference' => 'Preference',
-    'project_list_error' => 'Could not load project list. Is your API key correct?',
-    'projects' => 'Projects',
-    'projects_desc' => 'Project(s) available to select videos from.',
-    'setting' => 'Setting',
-    'video_list_error' => 'Could not load video list. Did you select any projects?',
+    'api_access_error'
+        => 'Error fetching API data.',
+    'api_key'
+        => 'API Key',
+    'api_key_desc'
+        => 'Your Wistia API key.',
+    'error'
+        => 'Wistia Error: ',
+    'error0'
+        => 'No API key defined.',
+    'error1'
+        => 'Could not load project list. Is your API key correct?',
+    'error2'
+        => 'Invalid video ID. Check channel entry setting: ',
+    'error3'
+        => 'Could not access the remote file: ',
+    'error4'
+        => 'Could not get a list of available projects from the API.',
+    'no_videos_error'
+        => 'There are no videos in the projects you selected.',
+    'preference'
+        => 'Preference',
+    'projects'
+        => 'Projects',
+    'projects_desc'
+        => 'Project(s) available to select videos from.',
+    'setting'
+        => 'Setting',
+    'video_list_error'
+        => 'Could not load video list. Did you select any projects?',
 );
 
 ?>
