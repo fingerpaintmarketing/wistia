@@ -420,7 +420,7 @@ class Wistia_FT extends EE_Fieldtype
         $options['ga']['endaction']
             = $this->_getParam('ga:endaction', $params, 'Complete');
         $options['ga']['label']
-            = $this->_getParam('ga:label', $params, $name);
+            = $this->_getParam('ga:label', $params, addslashes($name));
         $options['ga']['noninteraction']
             = $this->_getParam('ga:noninteraction', $params, 'false');
         $options['ga']['playaction']
@@ -501,6 +501,8 @@ class Wistia_FT extends EE_Fieldtype
             = $this->_getParam('volumecontrol', $params, 'true');
         $options['width']
             = $this->_getParam('width', $params, 640);
+        $options['videoFoam']
+            = $this->_getParam('responsive', $params, 'false');
     }
 
     /**
@@ -635,7 +637,8 @@ JS;
       controlsVisibleOnLoad: {$options['controlsVisibleOnLoad']},
       playerColor: '{$options['playerColor']}',
       autoPlay: {$options['autoPlay']},
-      endVideoBehavior: '{$options['endVideoBehavior']}'
+      endVideoBehavior: '{$options['endVideoBehavior']}',
+      videoFoam: '{$options['videoFoam']}'
     });
     {$socialBar}
     {$ga}
@@ -1068,6 +1071,40 @@ HTML;
 
         /** Otherwise, return URL as-is. */
         return $thumbnail;
+    }
+
+    /**
+     * Function to get an asset URL.
+     *
+     * @param array $data    Tag data from the database.
+     * @param array $params  Parameters from the tag.
+     * @param bool  $tagdata The markup between the tag pairs.
+     *
+     * @access public
+     * @return string The asset URL.
+     */
+    public function replace_asset_url($data, $params = array(), $tagdata = false)
+    {
+        /** Lowercase params. */
+        $params = array_change_key_case($params, CASE_LOWER);
+
+        /** Try to get API data. */
+        try {
+            $apiData = $this->_getApiData('video', $data);
+        } catch (Exception $e) {
+            $this->_logException($e);
+            return false;
+        }
+
+        /** Get media format from parameters array. */
+        $format = $this->_getParam('format', $params, 'mp4');
+
+        $url = $apiData['assets'][0]['url'];
+
+        /** Format requested media type. */
+        $url = str_replace('.bin', '/my-file.' . $format, $url);
+
+        return $url;
     }
 
     /**
