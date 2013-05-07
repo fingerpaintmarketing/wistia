@@ -44,7 +44,7 @@ class Wistia_FT extends EE_Fieldtype
      */
     public $info = array(
         'name' => 'Wistia',
-        'version' => '0.1.7',
+        'version' => '0.1.8',
     );
 
     /**
@@ -524,9 +524,7 @@ function ga_{$hashedId}() {
       '_trackEvent',
       '{$options['ga']['category']}',
       '{$options['ga']['playaction']}',
-      '{$options['ga']['label']}',
-      '{$options['ga']['value']}',
-      '{$options['ga']['noninteraction']}'
+      '{$options['ga']['label']}'
   ]);
   wistiaEmbed_{$hashedId}.unbind('play', ga_{$hashedId});
 }
@@ -536,9 +534,7 @@ wistiaEmbed_{$hashedId}.bind('end', function () {
       '_trackEvent',
       '{$options['ga']['category']}',
       '{$options['ga']['endaction']}',
-      '{$options['ga']['label']}',
-      '{$options['ga']['value']}',
-      '{$options['ga']['noninteraction']}'
+      '{$options['ga']['label']}'
   ]);
 });
 HTML;
@@ -646,6 +642,10 @@ JS;
 
   /** Call up the function to initialize this video. */
   wistiaInit_{$hashedId}();
+
+  function removeThisVideo() {
+    wistiaEmbed_{$hashedId}.remove();
+  }
 </script>
 HTML;
     }
