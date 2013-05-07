@@ -114,6 +114,12 @@
     <td>640</td>
     <td>The width of the video in pixels.</td>
   </tr>
+  <tr>
+    <td>responsive</td>
+    <td>boolean</td>
+    <td>false</td>
+    <td>Whether the player is dynamically responsive to its parent container.</td>
+  </tr>
 </table>
 
 ## Adding the Social Sharing Bar
@@ -251,6 +257,10 @@ The attributes available for use are as follows:
   <tr>
     <td>description</td>
     <td>A description for the media which usually appears near the top of the sidebar on the media's page.</td>
+  </tr>
+  <tr>
+    <td>asset_url</td>
+    <td>Get the path to the actual Wistia video file with given format of mp4 (default) or mov.</td>
   </tr>
   <tr>
     <td>hashed_id</td>
