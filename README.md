@@ -64,7 +64,7 @@
     <td>height</td>
     <td>integer</td>
     <td>360</td>
-    <td>The height of the video in pixels.</td>
+    <td>Alias for videoheight.</td>
   </tr>
   <tr>
     <td>playbar</td>
@@ -115,6 +115,18 @@
     <td>Whether the player is dynamically responsive to its parent container.</td>
   </tr>
   <tr>
+    <td>videoheight</td>
+    <td>integer</td>
+    <td>360</td>
+    <td>The height of the video in pixels.</td>
+  </tr>
+  <tr>
+    <td>videowidth</td>
+    <td>integer</td>
+    <td>640</td>
+    <td>The width of the video in pixels.</td>
+  </tr>
+  <tr>
     <td>volumecontrol</td>
     <td>boolean</td>
     <td>true</td>
@@ -124,7 +136,7 @@
     <td>width</td>
     <td>integer</td>
     <td>640</td>
-    <td>The width of the video in pixels.</td>
+    <td>Alias for videowidth.</td>
   </tr>
 </table>
 

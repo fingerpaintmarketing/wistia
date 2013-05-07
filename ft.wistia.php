@@ -483,8 +483,6 @@ class Wistia_FT extends EE_Fieldtype
             = $this->_getParam('endvideobehavior', $params, 'pause');
         $options['fullscreenButton']
             = $this->_getParam('fullscreenbutton', $params, 'true');
-        $options['height']
-            = $this->_getParam('height', $params, 360);
         $options['playbar']
             = $this->_getParam('playbar', $params, 'true');
         $options['playButton']
@@ -503,10 +501,20 @@ class Wistia_FT extends EE_Fieldtype
                 $params,
                 $this->_getParam('responsive', $params, 'false')
             );
+        $options['videoHeight']
+            = $this->_getParam(
+                'videoHeight',
+                $params,
+                $this->_getParam('height', $params, 360)
+            );
+        $options['videoWidth']
+            = $this->_getParam(
+                'videoWidth',
+                $params,
+                $this->_getParam('width', $params, 640)
+            );
         $options['volumeControl']
             = $this->_getParam('volumecontrol', $params, 'true');
-        $options['width']
-            = $this->_getParam('width', $params, 640);
     }
 
     /**
@@ -608,9 +616,9 @@ JS;
         return <<<HTML
 <div id="wistia_{$hashedId}"
     class="wistia_embed"
-    style="width:{$options['width']}px;height:{$options['height']}px;"
-    data-video-width="{$options['width']}"
-    data-video-height="{$options['height']}">&nbsp;
+    style="width:{$options['videoWidth']}px;height:{$options['videoHeight']}px;"
+    data-video-width="{$options['videoWidth']}"
+    data-video-height="{$options['videoHeight']}">&nbsp;
 </div>
 <script>
   /** Load Wistia JS, if not already loaded. */
@@ -631,8 +639,8 @@ JS;
     /** Process the embed. */
     wistiaEmbed_{$hashedId} = Wistia.embed("{$hashedId}", {
       version: "v1",
-      videoWidth: {$options['width']},
-      videoHeight: {$options['height']},
+      videoWidth: {$options['videoWidth']},
+      videoHeight: {$options['videoHeight']},
       playButton: {$options['playButton']},
       smallPlayButton: {$options['smallPlayButton']},
       playbar: {$options['playbar']},
@@ -686,8 +694,19 @@ HTML;
      */
     private function _superEmbedIframe($hashedId, $options)
     {
+        /** Build iframe URL. */
+        $iUrl = ($options['ssl']) ? 'https' : 'http';
+        $query = htmlentities(http_build_query($options)) . '&amp;version=v1';
+        $iUrl .= '://fast.wistia.net/embed/iframe/' . $hashedId . '?' . $query;
         return <<<HTML
-'iframe'
+<iframe src="{$iUrl}"
+    allowtransparency="true"
+    frameborder="0"
+    scrolling="no"
+    class="wistia_embed"
+    name="wistia_embed"
+    width="{$options['videoWidth']}"
+    height="{$options['videoHeight']}"></iframe>
 HTML;
     }
 
@@ -1064,8 +1083,8 @@ HTML;
         $thumbnail = $this->_valueOf('url', valueOf('thumbnail', $apiData));
 
         /** Get height and width from parameters array. */
-        $height = $this->_valueOf('height', $params);
-        $width  = $this->_valueOf('width', $params);
+        $height = $this->_valueOf('videoHeight', $params);
+        $width  = $this->_valueOf('videoWidth', $params);
 
         /** If height and width parameters are present, return modified URL. */
         if ($height && $width) {
