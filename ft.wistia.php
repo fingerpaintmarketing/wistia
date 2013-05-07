@@ -19,9 +19,6 @@ if (!defined('EXT')) {
     exit('No direct script access allowed.');
 }
 
-/** Include common functions. */
-require_once 'fn.wistia.php';
-
 /**
  * The fieldtype class for the Wistia module.
  *
