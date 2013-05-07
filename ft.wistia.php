@@ -44,7 +44,7 @@ class Wistia_FT extends EE_Fieldtype
      */
     public $info = array(
         'name' => 'Wistia',
-        'version' => '0.1.8',
+        'version' => '0.1.7',
     );
 
     /**
@@ -87,7 +87,7 @@ class Wistia_FT extends EE_Fieldtype
         }
 
         /** Construct dynamic base URL. */
-        $http = (valueOf('HTTPS', $_SERVER)) ? 'https://' : 'http://';
+        $http = ($this->_valueOf('HTTPS', $_SERVER)) ? 'https://' : 'http://';
         $baseUrl = $http . $_SERVER['HTTP_HOST'];
 
         /** Look for leading slash. */
@@ -240,7 +240,7 @@ class Wistia_FT extends EE_Fieldtype
      */
     private function _getParam($needle, $haystack, $default)
     {
-        $value = valueOf(strtolower($needle), $haystack);
+        $value = $this->_valueOf(strtolower($needle), $haystack);
         return ($value) ? $value : $default;
     }
 
@@ -266,8 +266,8 @@ class Wistia_FT extends EE_Fieldtype
 
         /** Add each project. */
         foreach ($data as $project) {
-            $id   = valueOf('id', $project);
-            $name = valueOf('name', $project);
+            $id   = $this->_valueOf('id', $project);
+            $name = $this->_valueOf('name', $project);
             $projects[$id] = $name;
         }
 
@@ -318,9 +318,9 @@ class Wistia_FT extends EE_Fieldtype
 
             /** Add each video. */
             foreach ($data as $video) {
-                $id      = valueOf('id', $video);
-                $name    = valueOf('name', $video);
-                $section = valueOf('section', $video);
+                $id      = $this->_valueOf('id', $video);
+                $name    = $this->_valueOf('name', $video);
+                $section = $this->_valueOf('section', $video);
                 if ($section) {
                     $videos[$projectNames[$project]][$section][$id] = $name;
                 } else {
@@ -381,10 +381,10 @@ class Wistia_FT extends EE_Fieldtype
         }
 
         /** Extract tag from data array. */
-        $val = valueOf($modifier, $apiData);
+        $val = $this->_valueOf($modifier, $apiData);
 
         /** Run striptags, if requested. */
-        if (valueOf('striptags', $params) == 'true') {
+        if ($this->_valueOf('striptags', $params) == 'true') {
             $val = strip_tags($val);
             $val = htmlentities($val, ENT_QUOTES, 'UTF-8', false);
             $val = trim($val);
@@ -524,7 +524,9 @@ function ga_{$hashedId}() {
       '_trackEvent',
       '{$options['ga']['category']}',
       '{$options['ga']['playaction']}',
-      '{$options['ga']['label']}'
+      '{$options['ga']['label']}',
+      '{$options['ga']['value']}',
+      '{$options['ga']['noninteraction']}'
   ]);
   wistiaEmbed_{$hashedId}.unbind('play', ga_{$hashedId});
 }
@@ -534,7 +536,9 @@ wistiaEmbed_{$hashedId}.bind('end', function () {
       '_trackEvent',
       '{$options['ga']['category']}',
       '{$options['ga']['endaction']}',
-      '{$options['ga']['label']}'
+      '{$options['ga']['label']}',
+      '{$options['ga']['value']}',
+      '{$options['ga']['noninteraction']}'
   ]);
 });
 HTML;
@@ -642,10 +646,6 @@ JS;
 
   /** Call up the function to initialize this video. */
   wistiaInit_{$hashedId}();
-
-  function removeThisVideo() {
-    wistiaEmbed_{$hashedId}.remove();
-  }
 </script>
 HTML;
     }
@@ -680,6 +680,22 @@ HTML;
         return <<<HTML
 'iframe'
 HTML;
+    }
+
+    /**
+     * Function to safely return the value of an array.
+     *
+     * @param string $needle   The value to look for.
+     * @param array  $haystack The array to search in.
+     *
+     * @return mixed False on failure, or the array at position $needle.
+     */
+    private function _valueOf($needle, $haystack)
+    {
+        if (!array_key_exists($needle, $haystack)) {
+            return false;
+        }
+        return $haystack[$needle];
     }
 
     /**
@@ -840,14 +856,15 @@ HTML;
             return lang('error_no_api_access');
         }
 
-        /** Extract the hashed ID of the video from the API data. */
-        $hashedId = valueOf('hashed_id', $apiData);
+        /** Extract the hashed ID and name of the video from the API data. */
+        $hashedId = $this->_valueOf('hashed_id', $apiData);
+        $name     = $this->_valueOf('name', $apiData);
 
         /** Build options array. */
         $options = array();
         $this->_seAddStandardOptions($options, $params);
         $this->_seAddSocialBar($options, $params);
-        $this->_seAddGoogleAnalytics($options, $params, valueOf('name', $apiData));
+        $this->_seAddGoogleAnalytics($options, $params, $name);
 
         /** Call template function based on type of embed. */
         switch ($options['type'])
@@ -1035,11 +1052,11 @@ HTML;
         }
 
         /** Extract the thumbnail URL from the API data. */
-        $thumbnail = valueOf('url', valueOf('thumbnail', $apiData));
+        $thumbnail = $this->_valueOf('url', valueOf('thumbnail', $apiData));
 
         /** Get height and width from parameters array. */
-        $height = valueOf('height', $params);
-        $width  = valueOf('width', $params);
+        $height = $this->_valueOf('height', $params);
+        $width  = $this->_valueOf('width', $params);
 
         /** If height and width parameters are present, return modified URL. */
         if ($height && $width) {
