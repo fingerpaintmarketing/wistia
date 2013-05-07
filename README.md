@@ -85,6 +85,12 @@
     <td>A six-character hex color code used for the player controls.</td>
   </tr>
   <tr>
+    <td>responsive</td>
+    <td>boolean</td>
+    <td>false</td>
+    <td>Alias for <code>videofoam</code>.</td>
+  </tr>
+  <tr>
     <td>smallplaybutton</td>
     <td>boolean</td>
     <td>true</td>
@@ -103,6 +109,12 @@
     <td>The type of embed. 'iframe' loads the video in an iframe, 'api' loads the video using JavaScript directly on the page, and 'popover' provides a link to load the video in an overlay.</td>
   </tr>
   <tr>
+    <td>videofoam</td>
+    <td>boolean</td>
+    <td>false</td>
+    <td>Whether the player is dynamically responsive to its parent container.</td>
+  </tr>
+  <tr>
     <td>volumecontrol</td>
     <td>boolean</td>
     <td>true</td>
@@ -113,12 +125,6 @@
     <td>integer</td>
     <td>640</td>
     <td>The width of the video in pixels.</td>
-  </tr>
-  <tr>
-    <td>responsive</td>
-    <td>boolean</td>
-    <td>false</td>
-    <td>Whether the player is dynamically responsive to its parent container.</td>
   </tr>
 </table>
 

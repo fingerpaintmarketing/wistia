@@ -41,7 +41,7 @@ class Wistia_FT extends EE_Fieldtype
      */
     public $info = array(
         'name' => 'Wistia',
-        'version' => '0.1.8',
+        'version' => '0.1.9',
     );
 
     /**
@@ -497,12 +497,16 @@ class Wistia_FT extends EE_Fieldtype
             = $this->_getParam('ssl', $params, false);
         $options['type']
             = $this->_getParam('type', $params, 'iframe');
+        $options['videoFoam']
+            = $this->_getParam(
+                'videofoam',
+                $params,
+                $this->_getParam('responsive', $params, 'false')
+            );
         $options['volumeControl']
             = $this->_getParam('volumecontrol', $params, 'true');
         $options['width']
             = $this->_getParam('width', $params, 640);
-        $options['videoFoam']
-            = $this->_getParam('responsive', $params, 'false');
     }
 
     /**
