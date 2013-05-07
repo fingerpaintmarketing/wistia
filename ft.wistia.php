@@ -694,9 +694,12 @@ HTML;
      */
     private function _superEmbedIframe($hashedId, $options)
     {
+        /** Build HTTP query for iframe URL. */
+        $options['version'] = 'v1';
+        $query = htmlentities(http_build_query($options));
+
         /** Build iframe URL. */
         $iUrl = ($options['ssl']) ? 'https' : 'http';
-        $query = htmlentities(http_build_query($options)) . '&amp;version=v1';
         $iUrl .= '://fast.wistia.net/embed/iframe/' . $hashedId . '?' . $query;
         return <<<HTML
 <iframe src="{$iUrl}"
