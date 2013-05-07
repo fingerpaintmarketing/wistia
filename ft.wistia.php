@@ -41,7 +41,7 @@ class Wistia_FT extends EE_Fieldtype
      */
     public $info = array(
         'name' => 'Wistia',
-        'version' => '0.1.7',
+        'version' => '0.1.8',
     );
 
     /**
@@ -643,6 +643,11 @@ JS;
 
   /** Call up the function to initialize this video. */
   wistiaInit_{$hashedId}();
+
+  /** Add a function to remove the video completely. */
+  function removeThisVideo() {
+    wistiaEmbed_{$hashedId}.remove();
+  }
 </script>
 HTML;
     }
