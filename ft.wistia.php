@@ -1102,7 +1102,6 @@ HTML;
 
         /** Get media format from parameters array. */
         $format = $this->_getParam('format', $params, 'mp4');
-
         $url = $apiData['assets'][0]['url'];
 
         /** Format requested media type. */
