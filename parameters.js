@@ -78,11 +78,11 @@
     },
     "socialbar": {
         "badgeImage": {
-            "type": "string",
+            "type": "url",
             "default": ""
         },
         "badgeUrl": {
-            "type": "string",
+            "type": "url",
             "default": ""
         },
         "downloadType": {
@@ -112,7 +112,7 @@
             ]
         },
         "pageUrl": {
-            "type": "string",
+            "type": "url",
             "default": ""
         },
         "showTweetCount": {

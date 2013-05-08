@@ -284,7 +284,9 @@ class Wistia_FT extends EE_Fieldtype
                 );
 
                 /** Filter out empty values. */
-                if (strlen($value) > 0) {
+                if ((!is_array($value) && strlen($value) > 0)
+                    || (is_array($value) && count($value) > 0)
+                ) {
                     $options[$groupName][$name] = $value;
                 }
             }
@@ -353,6 +355,9 @@ class Wistia_FT extends EE_Fieldtype
             break;
         case 'multiselect':
             $value = $this->_sanitizeMultiSelect($value, $default, $opt);
+            break;
+        case 'url':
+            $value = $this->_adjustUrl($value);
             break;
         }
 
@@ -645,13 +650,8 @@ class Wistia_FT extends EE_Fieldtype
         /** Filter out items that are not in the approved list. */
         $values = array_intersect(explode('|', $value), $list);
 
-        /** Check for empty set. */
-        if (count($values) === 0) {
-            return $default;
-        }
-
-        /** Recompile as pipe delimited list and return. */
-        return implode('|', $values);
+        /** Check for empty set and return. */
+        return (count($values) === 0) ? $default : $values;
     }
 
     /**
