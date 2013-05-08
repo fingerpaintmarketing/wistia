@@ -257,6 +257,8 @@ class Wistia_FT extends EE_Fieldtype
             } elseif ($groupName === 'ga') {
                 if (!isset($params['ga'])
                     || $this->_sanitizeBool($params['ga'], false) !== 'true'
+                    || !isset($params['type'])
+                    || $params['type'] !== 'api'
                 ) {
                     continue;
                 }
