@@ -248,17 +248,46 @@ class Wistia_FT extends EE_Fieldtype
         );
 
         /** Loop through parameters, adding to the options array. */
-        foreach ($parameters as $name => $param) {
-            $aliases = (isset($param['aliases'])) ? $param['aliases'] : array();
-            $opt = (isset($param['values'])) ? $param['values'] : '';
-            $options[$name] = $this->_getParam(
-                $name,
-                $params,
-                $param['type'],
-                $param['default'],
-                $aliases,
-                $opt
-            );
+        foreach ($parameters as $groupName => $group) {
+
+            /** Check for inclusion of this group. */
+            if ($groupName === 'socialbar' && !isset($params['socialbar'])) {
+                continue;
+            }
+
+            /** Loop through parameters within this group. */
+            foreach ($group as $name => $param) {
+
+                /** Get list of aliases, if provided. */
+                $aliases = (isset($param['aliases'])) ? $param['aliases'] : array();
+
+                /** Get list of possible values, if provided. */
+                $opt = (isset($param['values'])) ? $param['values'] : '';
+
+                /** Transform the search key in special circumstances. */
+                if ($groupName === 'socialbar' && $name === 'icons') {
+                    $paramName = 'socialbar';
+                } elseif($groupName !== 'general') {
+                    $paramName = $groupName . ':' . $name;
+                } else {
+                    $paramName = $name;
+                }
+
+                /** Get the value from the parameters, or the default. */
+                $value = $this->_getParam(
+                    $paramName,
+                    $params,
+                    $param['type'],
+                    $param['default'],
+                    $aliases,
+                    $opt
+                );
+
+                /** Filter out empty values. */
+                if (strlen($value) > 0) {
+                    $options[$groupName][$name] = $value;
+                }
+            }
         }
         return $options;
     }

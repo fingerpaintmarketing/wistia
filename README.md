@@ -154,7 +154,7 @@ The logo that will appear on social sites, as well as the target of the link, ca
   </tr>
   <tr>
     <td>socialbar</td>
-    <td>embed, email, videoStats, twitter, digg, reddit, tumblr, stumbleUpon, googlePlus, facebook</td>
+    <td>embed, email, videoStats, download, twitter, reddit, tumblr, stumbleUpon, linkedIn, googlePlus, facebook</td>
     <td>The logos will appear under the video from the list above in the order specified in the tag parameter.</td>
   </tr>
   <tr>
@@ -171,6 +171,16 @@ The logo that will appear on social sites, as well as the target of the link, ca
     <td>socialbar:pageurl</td>
     <td>Relative or absolute URL to a page</td>
     <td>If specified, this value will be used as the return URL for the link on the social site, instead of the current page URL.</td>
+  </tr>
+  <tr>
+    <td>socialbar:showtweetcount</td>
+    <td>true or false</td>
+    <td>Whether to include the tweet count in the Twitter badge.</td>
+  </tr>
+  <tr>
+    <td>socialbar:tweettext</td>
+    <td>Custom text for the tweet</td>
+    <td>Changes the default tweet text when the Twitter button is clicked.</td>
   </tr>
 </table>
 
