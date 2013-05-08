@@ -85,16 +85,7 @@
             "type": "url",
             "default": ""
         },
-        "downloadType": {
-            "type": "list",
-            "default": "sd_mp4",
-            "values": [
-                "sd_mp4",
-                "original",
-                "hd_mp4"
-            ]
-        },
-        "icons": {
+        "buttons": {
             "type": "multiselect",
             "default": "",
             "values": [
@@ -109,6 +100,15 @@
                 "linkedIn",
                 "googlePlus",
                 "facebook"
+            ]
+        },
+        "downloadType": {
+            "type": "list",
+            "default": "sd_mp4",
+            "values": [
+                "sd_mp4",
+                "original",
+                "hd_mp4"
             ]
         },
         "pageUrl": {

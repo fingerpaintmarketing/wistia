@@ -274,7 +274,7 @@ class Wistia_FT extends EE_Fieldtype
                 $opt = (isset($param['values'])) ? $param['values'] : '';
 
                 /** Transform the search key in special circumstances. */
-                if ($groupName === 'socialbar' && $name === 'icons') {
+                if ($groupName === 'socialbar' && $name === 'buttons') {
                     $paramName = 'socialbar';
                 } elseif ($groupName !== 'general') {
                     $paramName = $groupName . ':' . $name;
@@ -307,7 +307,7 @@ class Wistia_FT extends EE_Fieldtype
 
             /** Check for conditions to delete groups. */
             if ($groupName === 'socialbar'
-                && !isset($options['socialbar']['icons'])
+                && !isset($options['socialbar']['buttons'])
             ) {
                 unset($options['socialbar']);
             }
@@ -853,8 +853,19 @@ HTML;
     private function _superEmbedIframe($hashedId, $options)
     {
         /** Build HTTP query for iframe URL. */
-        $options['general']['version'] = 'v1';
-        $query = htmlentities(http_build_query($options['general']));
+        $query = $options['general'];
+        $query['version'] = 'v1';
+        if (isset($options['socialbar'])) {
+            foreach ($options['socialbar'] as $option => $value) {
+                $key = 'plugin[socialbar-v1][' . $option . ']';
+                if ($option === 'buttons') {
+                    $value = implode('-', $value);
+                }
+                $query[$key] = $value;
+            }
+        }
+        $query = str_replace('+', '%20', htmlentities(http_build_query($query)));
+        echo $query;
 
         /** Build iframe URL. */
         $iUrl = ($options['general']['ssl']) ? 'https' : 'http';
