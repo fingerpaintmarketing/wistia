@@ -228,12 +228,13 @@ class Wistia_FT extends EE_Fieldtype
     /**
      * Function to get an options array based on template tags and defaults.
      *
-     * @param array $params The parameters array created by EE for the tag.
+     * @param array $params  The parameters array created by EE for the tag.
+     * @param array $apiData The API data for this video.
      *
      * @access private
      * @return array   An array of options.
      */
-    private function _getOptions($params)
+    private function _getOptions($params, $apiData)
     {
         /** Set up container for options. */
         $options = array();
@@ -253,6 +254,12 @@ class Wistia_FT extends EE_Fieldtype
             /** Check for inclusion of this group. */
             if ($groupName === 'socialbar' && !isset($params['socialbar'])) {
                 continue;
+            } elseif ($groupName === 'ga') {
+                if (!isset($params['ga'])
+                    || $this->_sanitizeBool($params['ga'], false) !== 'true'
+                ) {
+                    continue;
+                }
             }
 
             /** Loop through parameters within this group. */
@@ -288,6 +295,11 @@ class Wistia_FT extends EE_Fieldtype
                     || (is_array($value) && count($value) > 0)
                 ) {
                     $options[$groupName][$name] = $value;
+                }
+
+                /** Handle dynamic values by adding API data. */
+                if ($groupName === 'ga' && $name === 'label' && $value === '') {
+                    $options[$groupName][$name] = $apiData['name'];
                 }
             }
 
@@ -1065,7 +1077,7 @@ HTML;
         $name     = $this->_valueOf('name', $apiData);
 
         /** Build options array. */
-        $options = $this->_getOptions($params);
+        $options = $this->_getOptions($params, $apiData);
         echo '<pre>';
         print_r($options);
         exit;

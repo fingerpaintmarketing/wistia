@@ -123,5 +123,31 @@
             "type": "string",
             "default": ""
         }
+    },
+    "ga": {
+        "category": {
+            "type": "string",
+            "default": "Video"
+        },
+        "endaction": {
+            "type": "string",
+            "default": "Complete"
+        },
+        "label": {
+            "type": "string",
+            "default": ""
+        },
+        "noninteraction": {
+            "type": "bool",
+            "default": "false"
+        },
+        "playaction": {
+            "type": "string",
+            "default": "Play"
+        },
+        "value": {
+            "type": "int",
+            "default": ""
+        }
     }
 }
