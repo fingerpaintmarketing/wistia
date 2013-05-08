@@ -267,7 +267,7 @@ class Wistia_FT extends EE_Fieldtype
                 /** Transform the search key in special circumstances. */
                 if ($groupName === 'socialbar' && $name === 'icons') {
                     $paramName = 'socialbar';
-                } elseif($groupName !== 'general') {
+                } elseif ($groupName !== 'general') {
                     $paramName = $groupName . ':' . $name;
                 } else {
                     $paramName = $name;
@@ -288,6 +288,13 @@ class Wistia_FT extends EE_Fieldtype
                     $options[$groupName][$name] = $value;
                 }
             }
+
+            /** Check for conditions to delete groups. */
+            if ($groupName === 'socialbar'
+                && !isset($options['socialbar']['icons'])
+            ) {
+                unset($options['socialbar']);
+            }
         }
         return $options;
     }
@@ -295,12 +302,12 @@ class Wistia_FT extends EE_Fieldtype
     /**
      * Function to return the value of a parameter, or a default value if none given.
      *
-     * @param string $key      The key to search for.
-     * @param array  $params   The params array to search in.
-     * @param string $type     The value type to enforce.
-     * @param mixed  $default  The default value to use, if none given.
-     * @param array  $aliases  An array of alias names to check for.
-     * @param mixed  $opt      Used for additional value checks, such as lists.
+     * @param string $key     The key to search for.
+     * @param array  $params  The params array to search in.
+     * @param string $type    The value type to enforce.
+     * @param mixed  $default The default value to use, if none given.
+     * @param array  $aliases An array of alias names to check for.
+     * @param mixed  $opt     Used for additional value checks, such as lists.
      *
      * @access private
      * @return mixed   The value, if found, or the default, if not.
@@ -343,6 +350,9 @@ class Wistia_FT extends EE_Fieldtype
             break;
         case 'list':
             $value = $this->_sanitizeList($value, $default, $opt);
+            break;
+        case 'multiselect':
+            $value = $this->_sanitizeMultiSelect($value, $default, $opt);
             break;
         }
 
@@ -498,6 +508,15 @@ class Wistia_FT extends EE_Fieldtype
         return $val;
     }
 
+    /**
+     * Function to sanitize and standardize a boolean value.
+     *
+     * @param mixed  $value   The value to check.
+     * @param string $default Either 'true' or 'false'
+     *
+     * @access private
+     * @return string  Either 'true' or 'false' depending on the check.
+     */
     private function _sanitizeBool($value, $default)
     {
         /** Determine if the value is a literal boolean. */
@@ -604,6 +623,35 @@ class Wistia_FT extends EE_Fieldtype
         }
 
         return (in_array($value, $list)) ? $value : $default;
+    }
+
+    /**
+     * Function to sanitize a multiselect value by checking it against values.
+     *
+     * @param string $value   The value to check.
+     * @param string $default The default value.
+     * @param array  $list    The list to check against.
+     *
+     * @access private
+     * @return string  The verified value, or the default if no match.
+     */
+    private function _sanitizeMultiSelect($value, $default, $list)
+    {
+        /** Check to see if the list value is an array to check against. */
+        if (!is_array($list)) {
+            return $default;
+        }
+
+        /** Filter out items that are not in the approved list. */
+        $values = array_intersect(explode('|', $value), $list);
+
+        /** Check for empty set. */
+        if (count($values) === 0) {
+            return $default;
+        }
+
+        /** Recompile as pipe delimited list and return. */
+        return implode('|', $values);
     }
 
     /**
