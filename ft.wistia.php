@@ -221,24 +221,103 @@ class Wistia_FT extends EE_Fieldtype
             $selected = '';
         }
 
-        /* Return the option list as a select dropdown. */
+        /** Return the option list as a select dropdown. */
         return form_dropdown($fieldName, $options, $selected);
+    }
+
+    /**
+     * Function to get an options array based on template tags and defaults.
+     *
+     * @param array $params The parameters array created by EE for the tag.
+     *
+     * @access private
+     * @return array   An array of options.
+     */
+    private function _getOptions($params)
+    {
+        /** Set up container for options. */
+        $options = array();
+
+        /** Lowercase keys in EE params array for matching. */
+        $params = array_change_key_case($params, CASE_LOWER);
+
+        /** Load parameters for defaults and aliases. */
+        $parameters = json_decode(
+            file_get_contents(__DIR__ . '/parameters.js'),
+            true
+        );
+
+        /** Loop through parameters, adding to the options array. */
+        foreach ($parameters as $name => $param) {
+            $aliases = (isset($param['aliases'])) ? $param['aliases'] : array();
+            $opt = (isset($param['values'])) ? $param['values'] : '';
+            $options[$name] = $this->_getParam(
+                $name,
+                $params,
+                $param['type'],
+                $param['default'],
+                $aliases,
+                $opt
+            );
+        }
+        return $options;
     }
 
     /**
      * Function to return the value of a parameter, or a default value if none given.
      *
-     * @param string $needle   The key to search for.
-     * @param array  $haystack The array to search in.
+     * @param string $key      The key to search for.
+     * @param array  $params   The params array to search in.
+     * @param string $type     The value type to enforce.
      * @param mixed  $default  The default value to use, if none given.
+     * @param array  $aliases  An array of alias names to check for.
+     * @param mixed  $opt      Used for additional value checks, such as lists.
      *
      * @access private
      * @return mixed   The value, if found, or the default, if not.
      */
-    private function _getParam($needle, $haystack, $default)
+    private function _getParam($key, $params, $type, $default, $aliases, $opt = '')
     {
-        $value = $this->_valueOf(strtolower($needle), $haystack);
-        return ($value) ? $value : $default;
+        /** Lowercase the key for matching keys in the array. */
+        $key = strtolower($key);
+
+        /** Determine if a value was given. */
+        if (!array_key_exists($key, $params)) {
+
+            /** Determine if there are aliases defined. */
+            if (count($aliases) > 0) {
+                $key = array_shift($aliases);
+                return $this->_getParam(
+                    $key,
+                    $params,
+                    $type,
+                    $default,
+                    $aliases
+                );
+            } else {
+                $value = $default;
+            }
+        } else {
+            $value = $params[$key];
+        }
+
+        /** Sanitize value based on type. */
+        switch ($type) {
+        case 'bool':
+            $value = $this->_sanitizeBool($value, $default);
+            break;
+        case 'hex':
+            $value = $this->_sanitizeHex($value, $default);
+            break;
+        case 'int':
+            $value = $this->_sanitizeInt($value, $default);
+            break;
+        case 'list':
+            $value = $this->_sanitizeList($value, $default, $opt);
+            break;
+        }
+
+        return $value;
     }
 
     /**
@@ -390,6 +469,114 @@ class Wistia_FT extends EE_Fieldtype
         return $val;
     }
 
+    private function _sanitizeBool($value, $default)
+    {
+        /** Determine if the value is a literal boolean. */
+        if (is_bool($value)) {
+            return ($value) ? 'true' : 'false';
+        }
+
+        /** Lowercase the value for string matching. */
+        $value = strtolower($value);
+
+        /** Check for values that match 'true' condition. */
+        if ($value === 'true'
+            || $value === 'yes'
+            || $value === 'y'
+        ) {
+            return 'true';
+        }
+
+        /** Check for values that match 'false' condition. */
+        if ($value === 'false'
+            || $value === 'no'
+            || $value === 'n'
+        ) {
+            return 'false';
+        }
+
+        /** Format the default value as a true or false string. */
+        return ($default) ? 'true' : 'false';
+    }
+
+    /**
+     * Function to sanitize a hex value, and return a default value if no match.
+     *
+     * @param string $value   The value to analyze.
+     * @param string $default The default value to use.
+     *
+     * @access private
+     * @return string  The modified value, or the default value on no match.
+     */
+    private function _sanitizeHex($value, $default)
+    {
+        /** Strip off leading # */
+        if (substr($value, 0, 1) === '#') {
+            $value = substr($value, 1);
+        }
+
+        /** Convert hex shortcode to full hex code. */
+        if (strlen($value) === 3) {
+            $value = substr($value, 0, 1)
+                . substr($value, 0, 1)
+                . substr($value, 1, 1)
+                . substr($value, 1, 1)
+                . substr($value, 2, 1)
+                . substr($value, 2, 1);
+        }
+
+        /** Check that resulting value is actually a hex number. */
+        if (strlen($value) === 6 || ctype_xdigit($value) === true) {
+            return $value;
+        }
+
+        return $default;
+    }
+
+    /**
+     * A function to sanitize an integer value.
+     *
+     * @param mixed $value   The value to analyze.
+     * @param int   $default The default value to use.
+     *
+     * @access private
+     * @return int     The integer, or the default value.
+     */
+    private function _sanitizeInt($value, $default)
+    {
+        /** Check to see if the value is already an integer. */
+        if (is_int($value)) {
+            return ($value >= 0) ? $value : $default;
+        }
+
+        /** Verify that the string contains only integer characters. */
+        if (preg_match('/[0-9]+/', $value, $matches)) {
+            return ($matches[0] === $value) ? $value : $default;
+        }
+
+        return $default;
+    }
+
+    /**
+     * Function to sanitize a list value by checking it against the list contents.
+     *
+     * @param string $value   The value to check.
+     * @param string $default The default value.
+     * @param array  $list    The list to check against.
+     *
+     * @access private
+     * @return string  The verified value, or the default if no match.
+     */
+    private function _sanitizeList($value, $default, $list)
+    {
+        /** Check to see if the list value is an array to check against. */
+        if (!is_array($list)) {
+            return $default;
+        }
+
+        return (in_array($value, $list)) ? $value : $default;
+    }
+
     /**
      * Function to append Google Analytics options to the superembed options array.
      *
@@ -462,59 +649,6 @@ class Wistia_FT extends EE_Fieldtype
             = $this->_adjustUrl(
                 $this->_getParam('socialbar:pageurl', $params, '')
             );
-    }
-
-    /**
-     * Function to append standard options to the superembed options array.
-     *
-     * @param array &$options The options array to append to.
-     * @param array $params   The EE tag parameters to pull from.
-     *
-     * @access private
-     * @return void
-     */
-    private function _seAddStandardOptions(&$options, $params)
-    {
-        $options['autoPlay']
-            = $this->_getParam('autoplay', $params, 'false');
-        $options['controlsVisibleOnLoad']
-            = $this->_getParam('controlsvisibleonload', $params, 'true');
-        $options['endVideoBehavior']
-            = $this->_getParam('endvideobehavior', $params, 'pause');
-        $options['fullscreenButton']
-            = $this->_getParam('fullscreenbutton', $params, 'true');
-        $options['playbar']
-            = $this->_getParam('playbar', $params, 'true');
-        $options['playButton']
-            = $this->_getParam('playbutton', $params, 'true');
-        $options['playerColor']
-            = $this->_getParam('playercolor', $params, '636155');
-        $options['smallPlayButton']
-            = $this->_getParam('smallplaybutton', $params, 'true');
-        $options['ssl']
-            = $this->_getParam('ssl', $params, false);
-        $options['type']
-            = $this->_getParam('type', $params, 'iframe');
-        $options['videoFoam']
-            = $this->_getParam(
-                'videofoam',
-                $params,
-                $this->_getParam('responsive', $params, 'false')
-            );
-        $options['videoHeight']
-            = $this->_getParam(
-                'videoHeight',
-                $params,
-                $this->_getParam('height', $params, 360)
-            );
-        $options['videoWidth']
-            = $this->_getParam(
-                'videoWidth',
-                $params,
-                $this->_getParam('width', $params, 640)
-            );
-        $options['volumeControl']
-            = $this->_getParam('volumecontrol', $params, 'true');
     }
 
     /**
@@ -876,9 +1010,6 @@ HTML;
      */
     public function replace_tag($data, $params = array(), $tagdata = false)
     {
-        /** Lowercase params. */
-        $params = array_change_key_case($params, CASE_LOWER);
-
         /** Try to get video data from the API. */
         try {
             $apiData = $this->_getApiData('video', $data);
@@ -892,10 +1023,14 @@ HTML;
         $name     = $this->_valueOf('name', $apiData);
 
         /** Build options array. */
+        $options = $this->_getOptions($params);
+        echo '<pre>';
+        print_r($options);
+        exit;
+        /*
         $options = array();
-        $this->_seAddStandardOptions($options, $params);
         $this->_seAddSocialBar($options, $params);
-        $this->_seAddGoogleAnalytics($options, $params, $name);
+        $this->_seAddGoogleAnalytics($options, $params, $name);*/
 
         /** Call template function based on type of embed. */
         switch ($options['type'])
