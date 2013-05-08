@@ -1,6 +1,6 @@
 {
     "general": {
-        "autoplay": {
+        "autoPlay": {
             "type": "bool",
             "default": false
         },

@@ -256,7 +256,7 @@ class Wistia_FT extends EE_Fieldtype
                 continue;
             } elseif ($groupName === 'ga') {
                 if (!isset($params['ga'])
-                    || $this->_sanitizeBool($params['ga'], false) !== 'true'
+                    || $this->_sanitizeBool($params['ga'], false) !== true
                     || !isset($params['type'])
                     || $params['type'] !== 'api'
                 ) {
@@ -295,6 +295,7 @@ class Wistia_FT extends EE_Fieldtype
                 /** Filter out empty values. */
                 if ((!is_array($value) && strlen($value) > 0)
                     || (is_array($value) && count($value) > 0)
+                    || is_bool($value)
                 ) {
                     $options[$groupName][$name] = $value;
                 }
@@ -315,7 +316,7 @@ class Wistia_FT extends EE_Fieldtype
 
         /** Override SSL value if on an SSL connection to the server. */
         if ($this->_valueOf('HTTPS', $_SERVER)) {
-            $options['general']['ssl'] = 'true';
+            $options['general']['ssl'] = true;
         }
 
         return $options;
@@ -536,40 +537,40 @@ class Wistia_FT extends EE_Fieldtype
     /**
      * Function to sanitize and standardize a boolean value.
      *
-     * @param mixed  $value   The value to check.
-     * @param string $default Either 'true' or 'false'
+     * @param mixed $value   The value to check.
+     * @param bool  $default The default value to use.
      *
      * @access private
-     * @return string  Either 'true' or 'false' depending on the check.
+     * @return bool    The value, if specified, or the default, if not or mismatch.
      */
     private function _sanitizeBool($value, $default)
     {
         /** Determine if the value is a literal boolean. */
         if (is_bool($value)) {
-            return ($value) ? 'true' : 'false';
+            return ($value) ? true : false;
         }
 
         /** Lowercase the value for string matching. */
         $value = strtolower($value);
 
-        /** Check for values that match 'true' condition. */
+        /** Check for values that match true condition. */
         if ($value === 'true'
             || $value === 'yes'
             || $value === 'y'
         ) {
-            return 'true';
+            return true;
         }
 
-        /** Check for values that match 'false' condition. */
+        /** Check for values that match false condition. */
         if ($value === 'false'
             || $value === 'no'
             || $value === 'n'
         ) {
-            return 'false';
+            return false;
         }
 
         /** Format the default value as a true or false string. */
-        return ($default) ? 'true' : 'false';
+        return ($default) ? true : false;
     }
 
     /**
@@ -852,9 +853,11 @@ HTML;
      */
     private function _superEmbedIframe($hashedId, $options)
     {
-        /** Build HTTP query for iframe URL. */
+        /** Add general options to the query array. */
         $query = $options['general'];
         $query['version'] = 'v1';
+
+        /** Add social bar options to the query array, if necessary. */
         if (isset($options['socialbar'])) {
             foreach ($options['socialbar'] as $option => $value) {
                 $key = 'plugin[socialbar-v1][' . $option . ']';
@@ -864,8 +867,27 @@ HTML;
                 $query[$key] = $value;
             }
         }
+
+        /** Convert boolean values to string 'true' and 'false'. */
+        foreach ($query as $key => $value) {
+            if ($value === true) {
+                $query[$key] = 'true';
+            } elseif ($value === false) {
+                $query[$key] = 'false';
+            }
+        }
+
+        /** Build HTTP query for iframe URL. */
         $query = str_replace('+', '%20', htmlentities(http_build_query($query)));
-        echo $query;
+
+        /** Construct dynamic iframe height parameter. */
+        $height = $options['general']['videoHeight'];
+        if (isset($options['socialbar'])) {
+            $height += 28;
+            if (count($options['socialbar']['buttons']) > 5) {
+                $height += 34;
+            }
+        }
 
         /** Build iframe URL. */
         $iUrl = ($options['general']['ssl']) ? 'https' : 'http';
@@ -878,7 +900,7 @@ HTML;
     class="wistia_embed"
     name="wistia_embed"
     width="{$options['general']['videoWidth']}"
-    height="{$options['general']['videoHeight']}"></iframe>
+    height="{$height}"></iframe>
 HTML;
     }
 
