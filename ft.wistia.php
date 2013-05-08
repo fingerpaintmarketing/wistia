@@ -667,45 +667,6 @@ class Wistia_FT extends EE_Fieldtype
     }
 
     /**
-     * Function to append Google Analytics options to the superembed options array.
-     *
-     * @param array  &$options The options array to append to.
-     * @param array  $params   The EE tag parameters to pull from.
-     * @param string $name     The video name for use in the label.
-     *
-     * @access private
-     * @return void
-     */
-    private function _seAddGoogleAnalytics(&$options, $params, $name)
-    {
-        /** Only applicable to the API embed type - skip if no match. */
-        if ($options['type'] != 'api') {
-            return;
-        }
-
-        /** If not enabled, set to false and skip out. */
-        if ($this->_getParam('ga', $params, false) != 'true') {
-            $options['ga']['enabled'] = false;
-            return;
-        }
-
-        /** Append parameters. */
-        $options['ga']['enabled'] = true;
-        $options['ga']['category']
-            = $this->_getParam('ga:category', $params, 'Video');
-        $options['ga']['endaction']
-            = $this->_getParam('ga:endaction', $params, 'Complete');
-        $options['ga']['label']
-            = $this->_getParam('ga:label', $params, addslashes($name));
-        $options['ga']['noninteraction']
-            = $this->_getParam('ga:noninteraction', $params, 'false');
-        $options['ga']['playaction']
-            = $this->_getParam('ga:playaction', $params, 'Play');
-        $options['ga']['value']
-            = $this->_getParam('ga:value', $params, '');
-    }
-
-    /**
      * Function to return the Google Analytics tracking code script, if needed.
      *
      * @param string $hashedId The hashed ID for the video.
@@ -716,6 +677,7 @@ class Wistia_FT extends EE_Fieldtype
      */
     private function _seApiGetGoogleAnalytics($hashedId, $options)
     {
+        /** TODO: addslashes() to user provided values. */
         if ($options['ga']['enabled']) {
             return <<<HTML
 function ga_{$hashedId}() {
@@ -1081,10 +1043,6 @@ HTML;
         echo '<pre>';
         print_r($options);
         exit;
-        /*
-        $options = array();
-        $this->_seAddSocialBar($options, $params);
-        $this->_seAddGoogleAnalytics($options, $params, $name);*/
 
         /** Call template function based on type of embed. */
         switch ($options['type'])
