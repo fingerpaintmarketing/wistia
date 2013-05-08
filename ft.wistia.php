@@ -312,6 +312,12 @@ class Wistia_FT extends EE_Fieldtype
                 unset($options['socialbar']);
             }
         }
+
+        /** Override SSL value if on an SSL connection to the server. */
+        if ($this->_valueOf('HTTPS', $_SERVER)) {
+            $options['general']['ssl'] = 'true';
+        }
+
         return $options;
     }
 
