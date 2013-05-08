@@ -87,7 +87,7 @@ class Wistia_FT extends EE_Fieldtype
         $http = ($this->_valueOf('HTTPS', $_SERVER)) ? 'https://' : 'http://';
         $baseUrl = $http . $_SERVER['HTTP_HOST'];
 
-        /** Look for leading slash. */
+        /** Look for leading slash to set relative to this page or server root. */
         if (substr($url, 0, 1) == '/') {
             return $baseUrl . $url;
         }
@@ -847,11 +847,11 @@ HTML;
     private function _superEmbedIframe($hashedId, $options)
     {
         /** Build HTTP query for iframe URL. */
-        $options['version'] = 'v1';
-        $query = htmlentities(http_build_query($options));
+        $options['general']['version'] = 'v1';
+        $query = htmlentities(http_build_query($options['general']));
 
         /** Build iframe URL. */
-        $iUrl = ($options['ssl']) ? 'https' : 'http';
+        $iUrl = ($options['general']['ssl']) ? 'https' : 'http';
         $iUrl .= '://fast.wistia.net/embed/iframe/' . $hashedId . '?' . $query;
         return <<<HTML
 <iframe src="{$iUrl}"
@@ -860,8 +860,8 @@ HTML;
     scrolling="no"
     class="wistia_embed"
     name="wistia_embed"
-    width="{$options['videoWidth']}"
-    height="{$options['videoHeight']}"></iframe>
+    width="{$options['general']['videoWidth']}"
+    height="{$options['general']['videoHeight']}"></iframe>
 HTML;
     }
 
@@ -1042,12 +1042,10 @@ HTML;
 
         /** Build options array. */
         $options = $this->_getOptions($params, $apiData);
-        echo '<pre>';
-        print_r($options);
-        exit;
 
         /** Call template function based on type of embed. */
-        switch ($options['type'])
+        $type = $this->_valueOf('type', $params);
+        switch ($type)
         {
         case 'popover':
             return $this->_superEmbedPopover($hashedId, $options);
