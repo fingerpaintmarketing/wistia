@@ -41,7 +41,7 @@ class Wistia_FT extends EE_Fieldtype
      */
     public $info = array(
         'name' => 'Wistia',
-        'version' => '0.1.9',
+        'version' => '0.2.0',
     );
 
     /**
