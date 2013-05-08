@@ -694,41 +694,6 @@ class Wistia_FT extends EE_Fieldtype
     }
 
     /**
-     * Function to append social sharing options to the superembed options array.
-     *
-     * @param array &$options The options array to append to.
-     * @param array $params   The EE tag parameters to pull from.
-     *
-     * @access private
-     * @return void
-     */
-    private function _seAddSocialBar(&$options, $params)
-    {
-        /** If not enabled, set to false and skip out. */
-        if (strlen($this->_getParam('socialbar', $params, '')) == 0) {
-            $options['socialbar']['enabled'] = false;
-            return;
-        }
-
-        /** Append parameters. */
-        $options['socialbar']['enabled'] = true;
-        $options['socialbar']['buttons']
-            = str_replace('|', '-', $this->_getParam('socialbar', $params, ''));
-        $options['socialbar']['badgeimage']
-            = $this->_adjustUrl(
-                $this->_getParam('socialbar:badgeimage', $params, '')
-            );
-        $options['socialbar']['badgeurl']
-            = $this->_adjustUrl(
-                $this->_getParam('socialbar:badgeurl', $params, '')
-            );
-        $options['socialbar']['pageurl']
-            = $this->_adjustUrl(
-                $this->_getParam('socialbar:pageurl', $params, '')
-            );
-    }
-
-    /**
      * Function to return the Google Analytics tracking code script, if needed.
      *
      * @param string $hashedId The hashed ID for the video.
