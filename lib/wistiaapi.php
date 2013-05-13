@@ -36,6 +36,14 @@ class WistiaApi
     private $_baseUrl;
 
     /**
+     * Variable to hold the list of projects for this API key.
+     *
+     * @access private
+     * @var array
+     */
+    private $_projects;
+
+    /**
      * Constructor function.
      *
      * @param string $apiKey The API key to use when connecting.
@@ -138,9 +146,6 @@ class WistiaApi
         /** Pull API data based on target. */
         switch ($target)
         {
-        case 'projects':
-            $baseUrl .= 'projects.json' . $urlParams;
-            break;
         case 'video':
             if (strlen($id) == 0 || $id == 0) {
                 /** Fail if ID is undefined or zero. */
@@ -148,9 +153,6 @@ class WistiaApi
             } else {
                 $baseUrl .= 'medias/' . $id . '.json' . $urlParams;
             }
-            break;
-        case 'videos':
-            $baseUrl .= 'medias.json' . $urlParams;
             break;
         }
 
@@ -321,88 +323,6 @@ class WistiaApi
         }
 
         return $value;
-    }
-
-    /**
-     * Function to get an array of available videos given API key and project list.
-     *
-     * @throws Exception If unable to get a list of projects from the API.
-     * @throws Exception If unable to get a list of videos for a project.
-     *
-     * @access private
-     * @return array
-     */
-    private function _getVideos()
-    {
-        $projects = $this->settings['projects'];
-
-        /** Try to get project names. */
-        try {
-            $projectNames = $this->_getProjects();
-        } catch (Exception $e) {
-            throw new Exception(lang('error_no_projects'), 1, $e);
-        }
-
-        /** If no defined projects, fail out. */
-        if (!is_array($projects) || !is_array($projectNames)) {
-            return false;
-        }
-
-        /** Add videos from each project. */
-        $videos = array();
-        foreach ($projects as $project) {
-            $params = array('sort_by' => 'name', 'project_id' => $project);
-
-            /** Try to get a list of videos for this project. */
-            try {
-                $data = $this->_getApiData('videos', $project, $params);
-            } catch (Exception $e) {
-                throw new Exception(lang('error_no_video_list') . $project, 5, $e);
-            }
-
-            /** Skip empty datasets. */
-            if (!is_array($data)) {
-                continue;
-            }
-
-            /** Add each video. */
-            foreach ($data as $video) {
-                $id      = $this->_valueOf('id', $video);
-                $name    = $this->_valueOf('name', $video);
-                $section = $this->_valueOf('section', $video);
-                if ($section) {
-                    $videos[$projectNames[$project]][$section][$id] = $name;
-                } else {
-                    $videos[$projectNames[$project]][$id] = $name;
-                }
-            }
-        }
-        ksort($videos);
-        return $videos;
-    }
-
-    /**
-     * Function to log an exception.
-     *
-     * @param Exception $e The exception to log.
-     *
-     * @access private
-     * @return void
-     */
-    private function _logException($e)
-    {
-        /** Log the exception to the developer log. */
-        $message = '';
-        do {
-            $message .= nl2br(
-                lang('error_prefix') . $e->getMessage() . '<br>'
-                . 'Code: ' . $e->getCode() . '<br>'
-                . 'File: ' . $e->getFile() . '<br>'
-                . 'Line: ' . $e->getLine() . '<br>'
-                . 'Trace: ' . $e->getTraceAsString() . '<br><br>'
-            );
-        } while ($e = $e->getPrevious());
-        $this->EE->logger->developer($message, true);
     }
 
     /**
@@ -838,6 +758,11 @@ HTML;
      */
     public function getProjects()
     {
+        /** Determine if the project list was already populated. */
+        if (is_array($this->_projects)) {
+            return $this->_projects;
+        }
+
         /** Get API data. */
         $url = $this->_baseUrl . 'projects.json?sort_by=name';
         $jsonData = @file_get_contents($url);
@@ -847,14 +772,71 @@ HTML;
         $data = json_decode($jsonData, true);
 
         /** Add each project. */
-        $projects = array();
+        $this->_projects = array();
         foreach ($data as $project) {
             if (isset($project['id']) && isset($project['name'])) {
-                $projects[$project['id']] = $project['name'];
+                $this->_projects[$project['id']] = $project['name'];
             }
         }
 
-        return $projects;
+        return $this->_projects;
+    }
+
+    /**
+     * Function to get an array of available videos given a project list.
+     *
+     * @param array $projects An array of project IDs to look up.
+     *
+     * @throws Exception If unable to get a list of projects from the API.
+     * @throws Exception If unable to get a list of videos for a project.
+     *
+     * @access public
+     * @return array
+     */
+    public function getVideos($projects)
+    {
+        /** Ensure that the passed parameter is an array. */
+        if (!is_array($projects)) {
+            throw new Exception('Project parameter passed was invalid.', 4);
+        }
+
+        /** Try to filter projects and get project names. */
+        try {
+            $projectNames = $this->getProjects();
+            $projects = array_intersect($projectNames, array_flip($projects));
+        } catch (Exception $e) {
+            throw new Exception('Could not get a list of projects.', 5, $e);
+        }
+
+        /** Add videos from each project. */
+        $videos = array();
+        foreach ($projects as $id => $name) {
+
+            /** Get the list of videos for this project in JSON format. */
+            $params = array('sort_by' => 'name', 'project_id' => $id);
+            $url = $this->_baseUrl . 'medias.json?' . http_build_query($params);
+            $jsonData = @file_get_contents($url);
+
+            /** Ensure that the list was obtained. */
+            if ($jsonData === false) {
+                throw new Exception('Could not get a list of videos.', 6);
+            }
+
+            /** Add each video. */
+            $data = json_decode($jsonData);
+            foreach ($data as $video) {
+                if (isset($video['id']) && isset($video['name'])) {
+                    if (isset($video['section'])) {
+                        $videos[$name][$video['section']][$video['id']]
+                            = $video['name'];
+                    } else {
+                        $videos[$name][$video['id']] = $video['name'];
+                    }
+                }
+            }
+        }
+        ksort($videos);
+        return $videos;
     }
 }
 

@@ -87,7 +87,7 @@ class Wistia_FT extends EE_Fieldtype
     {
         /** Try to get the list of videos from the API. */
         try {
-            $videos = $this->_getVideos();
+            $videos = $this->api()->getVideos($this->settings['projects']);
         } catch (Exception $e) {
             $this->_logException($e);
             return lang('error_empty_video_list');
