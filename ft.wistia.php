@@ -64,6 +64,7 @@ class Wistia_FT extends EE_Fieldtype
      */
     public function __construct()
     {
+        /** Runs parent constructor for EE_Fieldtype. */
         parent::__construct();
 
         /** Grants class-level access to the language file for this fieldtype. */
@@ -71,6 +72,78 @@ class Wistia_FT extends EE_Fieldtype
 
         /** Loads the Logger library for writing to the EE developer log. */
         $this->EE->load->library('logger');
+
+        /** Loads up the API if an API key was defined. */
+        if (isset($this->settings['api_key'])) {
+            try {
+                $this->_api = new WistiaApi($this->settings['api_key']);
+            } catch (Exception $e) {
+                $this->_api = false;
+            }
+        } else {
+            $this->_api = false;
+        }
+    }
+
+    /**
+     * Function to get the HTML for a dropdown for a Publish field.
+     *
+     * @param array  $data      Information about what is selected.
+     * @param string $fieldName The name of the form field to use.
+     *
+     * @access private
+     * @return string The HTML for the field.
+     */
+    private function _getField($data, $fieldName)
+    {
+        /** Try to get the list of videos from the API. */
+        try {
+            $videos = $this->_getVideos();
+        } catch (Exception $e) {
+            $this->_logException($e);
+            return lang('error_empty_video_list');
+        }
+
+        /** Fail on no projects selected. */
+        if (!is_array($videos)) {
+            return lang('error_empty_video_list');
+        }
+
+        /** Fail on no available videos. */
+        if (count($videos) == 0) {
+            return lang('error_no_videos_in_project');
+        }
+
+        /** Re-organize video multi-dimensional array into options. */
+        $options = array('-- Select --');
+        foreach ($videos as $projectName => &$project) {
+            if (is_array($project)) {
+                foreach ($project as $sectionName => $section) {
+                    if (is_array($section)) {
+                        $sectionKey = 'section-' . $sectionName;
+                        $options[$projectName][$sectionKey] = "[$sectionName]";
+                        foreach ($section as $videoId => $videoName) {
+                            $options[$projectName][$videoId]
+                                = '&nbsp;&nbsp;&nbsp;&nbsp;' . $videoName;
+                        }
+                    } else {
+                        $options[$projectName][$sectionName] = $section;
+                    }
+                }
+            } else {
+                $options[$projectName] = $project;
+            }
+        }
+
+        /** Get selected item, if any. */
+        if ($data) {
+            $selected = $data;
+        } else {
+            $selected = '';
+        }
+
+        /** Return the option list as a select dropdown. */
+        return form_dropdown($fieldName, $options, $selected);
     }
 
     /**
