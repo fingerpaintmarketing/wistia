@@ -72,17 +72,6 @@ class Wistia_FT extends EE_Fieldtype
 
         /** Loads the Logger library for writing to the EE developer log. */
         $this->EE->load->library('logger');
-
-        /** Loads up the API if an API key was defined. */
-        if (isset($this->settings['api_key'])) {
-            try {
-                $this->_api = new WistiaApi($this->settings['api_key']);
-            } catch (Exception $e) {
-                $this->_api = false;
-            }
-        } else {
-            $this->_api = false;
-        }
     }
 
     /**
@@ -147,6 +136,62 @@ class Wistia_FT extends EE_Fieldtype
     }
 
     /**
+     * Function to log an exception.
+     *
+     * @param Exception $e The exception to log.
+     *
+     * @access private
+     * @return void
+     */
+    private function _logException($e)
+    {
+        /** Log the exception to the developer log. */
+        $message = '';
+        do {
+            $message .= nl2br(
+                lang('error_prefix') . $e->getMessage() . '<br>'
+                . 'Code: ' . $e->getCode() . '<br>'
+                . 'File: ' . $e->getFile() . '<br>'
+                . 'Line: ' . $e->getLine() . '<br>'
+                . 'Trace: ' . $e->getTraceAsString() . '<br><br>'
+            );
+        } while ($e = $e->getPrevious());
+        $this->EE->logger->developer($message, true);
+    }
+
+    /**
+     * Function to return the API object.
+     *
+     * @throws Exception If the API object was not able to be created.
+     *
+     * @access public
+     * @return mixed  Object, if able to create an API object; false otherwise.
+     */
+    public function api()
+    {
+        /** Check to see if the API is already set. If so, return. */
+        if (is_object($this->_api)) {
+            return $this->_api;
+        }
+
+        /** Check to see if the API wasn't able to be created. */
+        if ($this->_api === false) {
+            throw new Exception(lang('error_no_api_access'), 1);
+        }
+
+        /** Create the API object. */
+        try {
+            $this->_api = new WistiaApi($this->settings['api_key']);
+        } catch (Exception $e) {
+            $this->_logException($e);
+            die(lang('error_prefix') . lang('error_no_api_access'));
+        }
+
+        /** Return the API object on successful creation. */
+        return $this->_api;
+    }
+
+    /**
      * Function to display a Matrix cell.
      *
      * @param array $data The value of the form field.
@@ -171,7 +216,7 @@ class Wistia_FT extends EE_Fieldtype
     {
         /** Try to get the list of projects. */
         try {
-            $options  = $this->_getProjects();
+            $options = $this->api()->getProjects();
         } catch (Exception $e) {
             $this->_logException($e);
             return lang('error_no_projects');
@@ -246,7 +291,7 @@ class Wistia_FT extends EE_Fieldtype
     {
         /** Try to get project list. */
         try {
-            $options  = $this->_getProjects();
+            $options = $this->api()->getProjects();
         } catch (Exception $e) {
             $this->_logException($e);
             return lang('error_no_projects');

@@ -324,36 +324,6 @@ class WistiaApi
     }
 
     /**
-     * Function to get an array of available projects given an API key.
-     *
-     * @throws Exception If unable to retrieve a list of projects from the API.
-     *
-     * @access private
-     * @return array
-     */
-    private function _getProjects()
-    {
-        $projects = array();
-        $params   = array('sort_by' => 'name');
-
-        /** Try to get API data. */
-        try {
-            $data = $this->_getApiData('projects', '', $params);
-        } catch (Exception $e) {
-            throw new Exception(lang('error_no_projects'), 1, $e);
-        }
-
-        /** Add each project. */
-        foreach ($data as $project) {
-            $id   = $this->_valueOf('id', $project);
-            $name = $this->_valueOf('name', $project);
-            $projects[$id] = $name;
-        }
-
-        return $projects;
-    }
-
-    /**
      * Function to get an array of available videos given API key and project list.
      *
      * @throws Exception If unable to get a list of projects from the API.
@@ -856,6 +826,35 @@ HTML;
             return false;
         }
         return $haystack[$needle];
+    }
+
+    /**
+     * Function to get a list of projects.
+     *
+     * @throws Exception If unable to retrieve project list.
+     *
+     * @access public
+     * @return array  An array of projects on this account.
+     */
+    public function getProjects()
+    {
+        /** Get API data. */
+        $url = $this->_baseUrl . 'projects.json?sort_by=name';
+        $jsonData = @file_get_contents($url);
+        if ($jsonData === false) {
+            throw new Exception('Could not get list of projects.', 3);
+        }
+        $data = json_decode($jsonData, true);
+
+        /** Add each project. */
+        $projects = array();
+        foreach ($data as $project) {
+            if (isset($project['id']) && isset($project['name'])) {
+                $projects[$project['id']] = $project['name'];
+            }
+        }
+
+        return $projects;
     }
 }
 
