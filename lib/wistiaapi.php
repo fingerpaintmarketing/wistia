@@ -109,6 +109,99 @@ class WistiaApi
     }
 
     /**
+     * Function to return the Google Analytics tracking code script, if needed.
+     *
+     * @param string $hashedId The hashed ID for the video.
+     * @param array  $options  The options array, built from the tag params.
+     *
+     * @access private
+     * @return string  The Google Analytics script, if requested, otherwise blank.
+     */
+    private function _apiGetGoogleAnalytics($hashedId, $options)
+    {
+        /** Check to see if GA should be included. */
+        if (!isset($options['ga'])) {
+            return;
+        }
+
+        /** Construct play and end action arrays with required GA elements. */
+        $playAction = array(
+            '_trackEvent',
+            $options['ga']['category'],
+            $options['ga']['playAction']
+        );
+        $endAction = array(
+            '_trackEvent',
+            $options['ga']['category'],
+            $options['ga']['endAction']
+        );
+
+        /** Supplement play and end action arrays with optional parameters. */
+        if (isset($options['ga']['label'])) {
+            $playAction[] = $options['ga']['label'];
+            $endAction[]  = $options['ga']['label'];
+            if (isset($options['ga']['value'])) {
+                $playAction[] = $options['ga']['value'];
+                $endAction[]  = $options['ga']['value'];
+                if (isset($options['ga']['nonInteraction'])) {
+                    $playAction[] = $options['ga']['nonInteraction'];
+                    $endAction[]  = $options['ga']['nonInteraction'];
+                }
+            }
+        }
+
+        /** Crunch play and end action arrays into JSON objects. */
+        $playAction = json_encode($playAction);
+        $endAction  = json_encode($endAction);
+
+        return <<<HTML
+function ga_{$hashedId}() {
+  _gaq.push({$playAction});
+  wistiaEmbed_{$hashedId}.unbind('play', ga_{$hashedId});
+}
+wistiaEmbed_{$hashedId}.bind('play', ga_{$hashedId});
+wistiaEmbed_{$hashedId}.bind('end', function () {
+  _gaq.push({$endAction});
+});
+HTML;
+    }
+
+    /**
+     * Function to return the Social Sharing script, if needed.
+     *
+     * @param string $hashedId The hashed ID for the video.
+     * @param array  $options  The options array, built from the tag params.
+     *
+     * @access private
+     * @return string  The social sharing script, if requested, otherwise blank.
+     */
+    private function _apiGetSocialBar($hashedId, $options)
+    {
+        return;
+        if ($options['socialbar']['enabled']) {
+            $badgeUrl = ($options['socialbar']['badgeurl'])
+                ? ', logo: true, badgeUrl: "'
+                    . $options['socialbar']['badgeurl'] . '"'
+                : '';
+            $badgeImage = ($options['socialbar']['badgeimage'])
+                ? ', badgeImage: "' . $options['socialbar']['badgeimage'] . '"'
+                : '';
+            $pageUrl = ($options['socialbar']['pageurl'])
+                ? ', pageUrl: "' . $options['socialbar']['pageurl'] . '"'
+                : '';
+
+            return <<<JS
+Wistia.plugin.socialbar(wistiaEmbed_{$hashedId}, {
+  version: "v1",
+  buttons: "{$options['socialbar']['buttons']}"{$badgeUrl}{$badgeImage}{$pageUrl}
+});
+JS;
+        } else {
+            return '';
+        }
+    }
+
+    /**
      * Function to get an options array based on parameters.
      *
      * @param array $params A nested key-value pair of override parameters.
@@ -399,82 +492,6 @@ class WistiaApi
     }
 
     /**
-     * Function to return the Google Analytics tracking code script, if needed.
-     *
-     * @param string $hashedId The hashed ID for the video.
-     * @param array  $options  The options array, built from the tag params.
-     *
-     * @access private
-     * @return string  The Google Analytics script, if requested, otherwise blank.
-     */
-    private function _seApiGetGoogleAnalytics($hashedId, $options)
-    {
-        /** TODO: addslashes() to user provided values. */
-        if ($options['ga']['enabled']) {
-            return <<<HTML
-function ga_{$hashedId}() {
-  _gaq.push([
-      '_trackEvent',
-      '{$options['ga']['category']}',
-      '{$options['ga']['playaction']}',
-      '{$options['ga']['label']}',
-      '{$options['ga']['value']}',
-      '{$options['ga']['noninteraction']}'
-  ]);
-  wistiaEmbed_{$hashedId}.unbind('play', ga_{$hashedId});
-}
-wistiaEmbed_{$hashedId}.bind('play', ga_{$hashedId});
-wistiaEmbed_{$hashedId}.bind('end', function () {
-  _gaq.push([
-      '_trackEvent',
-      '{$options['ga']['category']}',
-      '{$options['ga']['endaction']}',
-      '{$options['ga']['label']}',
-      '{$options['ga']['value']}',
-      '{$options['ga']['noninteraction']}'
-  ]);
-});
-HTML;
-        } else {
-            return '';
-        }
-    }
-
-    /**
-     * Function to return the Social Sharing script, if needed.
-     *
-     * @param string $hashedId The hashed ID for the video.
-     * @param array  $options  The options array, built from the tag params.
-     *
-     * @access private
-     * @return string  The social sharing script, if requested, otherwise blank.
-     */
-    private function _seApiGetSocialBar($hashedId, $options)
-    {
-        if ($options['socialbar']['enabled']) {
-            $badgeUrl = ($options['socialbar']['badgeurl'])
-                ? ', logo: true, badgeUrl: "'
-                    . $options['socialbar']['badgeurl'] . '"'
-                : '';
-            $badgeImage = ($options['socialbar']['badgeimage'])
-                ? ', badgeImage: "' . $options['socialbar']['badgeimage'] . '"'
-                : '';
-            $pageUrl = ($options['socialbar']['pageurl'])
-                ? ', pageUrl: "' . $options['socialbar']['pageurl'] . '"'
-                : '';
-
-            return <<<JS
-Wistia.plugin.socialbar(wistiaEmbed_{$hashedId}, {
-  version: "v1",
-  buttons: "{$options['socialbar']['buttons']}"{$badgeUrl}{$badgeImage}{$pageUrl}
-});
-JS;
-        } else {
-            return '';
-        }
-    }
-
-    /**
      * Embeds the video as a JS API embed.
      *
      * @param string $id     The video ID.
@@ -523,8 +540,8 @@ JS;
         $jsonOptions = json_encode($options['general']);
 
         /** Get socialbar and Google Analytics code. */
-        $socialBar = '';
-        $ga = '';
+        $socialBar = $this->_apiGetSocialBar($video['hashed_id'], $options);
+        $ga = $this->_apiGetGoogleAnalytics($video['hashed_id'], $options);
 
         /** Return rendered SuperEmbed template. */
         $height = $options['general']['videoHeight'];
