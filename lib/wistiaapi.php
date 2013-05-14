@@ -426,7 +426,7 @@ class WistiaApi
         }
 
         /** Filter out items that are not in the approved list. */
-        $values = array_intersect(explode('|', $value), $list);
+        $values = array_intersect($value, $list);
 
         /** Check for empty set and return. */
         return (count($values) === 0) ? $default : $values;
