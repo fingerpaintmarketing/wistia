@@ -58,12 +58,12 @@ class WistiaApi
     {
         /** Ensure API key exists. */
         if ($apiKey === false || strlen($apiKey) === 0) {
-            throw new Exception('No API key defined.', 1);
+            throw new Exception('No API key defined.');
         }
 
         /** Verify that API key is hexidecimal. */
         if (ctype_xdigit($apiKey) !== true) {
-            throw new Exception('Malformed API key. Keys must be hexidecimal.', 2);
+            throw new Exception('Malformed API key. Keys must be hexidecimal.');
         }
 
         /** Build API URL. */
@@ -106,63 +106,6 @@ class WistiaApi
         }
 
         return $baseUrl . $url;
-    }
-
-    /**
-     * Function to return an API URL.
-     *
-     * @param string $target The target JSON to extract.
-     * @param string $id     The ID to use for lookup.
-     * @param array  $params Additional parameters to append to the request.
-     *
-     * @throws Exception If no API key is defined.
-     * @throws Exception If video data is requested with an id that is blank or 0.
-     * @throws Exception If unable to download the JSON data from the API provider.
-     *
-     * @access private
-     * @return string The formatted URL.
-     */
-    private function _getApiData($target, $id = '', $params = array())
-    {
-        /** Set the base URL using the API key from the global settings. */
-        $apiKey  = $this->settings['api_key'];
-        $baseUrl = 'https://api:' . $apiKey . '@api.wistia.com/v1/';
-
-        /** Fail if no API key defined. */
-        if (!$apiKey) {
-            throw new Exception(lang('error_no_api_key'), 0);
-        }
-
-        /** Get API parameter URL string to append to the end. */
-        $urlParams = '';
-        if (count($params) > 0) {
-            $apiParams = array();
-            foreach ($params as $key => $value) {
-                $apiParams[] = "$key=$value";
-            }
-            $urlParams = '?' . implode('&', $apiParams);
-        }
-
-        /** Pull API data based on target. */
-        switch ($target)
-        {
-        case 'video':
-            if (strlen($id) == 0 || $id == 0) {
-                /** Fail if ID is undefined or zero. */
-                throw new Exception(lang('error_invalid_videoid') . "'$id'", 2);
-            } else {
-                $baseUrl .= 'medias/' . $id . '.json' . $urlParams;
-            }
-            break;
-        }
-
-        /** Return JSON-decoded stream. */
-        $jsonData = @file_get_contents($baseUrl);
-        if ($jsonData === false) {
-            throw new Exception(lang('error_remote_file') . $baseUrl, 3);
-        } else {
-            return json_decode($jsonData, true);
-        }
     }
 
     /**
@@ -767,7 +710,7 @@ HTML;
         $url = $this->_baseUrl . 'projects.json?sort_by=name';
         $jsonData = @file_get_contents($url);
         if ($jsonData === false) {
-            throw new Exception('Could not get list of projects.', 3);
+            throw new Exception('Could not get list of projects.');
         }
         $data = json_decode($jsonData, true);
 
@@ -783,9 +726,40 @@ HTML;
     }
 
     /**
+     * Function to get details about a specific video, given a video ID.
+     *
+     * @param mixed $id The video ID to look up.
+     *
+     * @throws Exception If the provided ID was invalid (not an integer, or <= 0).
+     *
+     * @access public
+     * @return array  An array of information about the video.
+     */
+    public function getVideo($id)
+    {
+        /** Convert ID to a true integer. */
+        $id = intval($id, 10);
+
+        /** Ensure that the id passed is valid. */
+        if ($id <= 0) {
+            throw new Exception('Invalid ID passed for video.');
+        }
+
+        /** Get details about the video from the API. */
+        $data = @file_get_contents($this->_baseUrl . 'medias/' . $id . '.json');
+
+        /** Check to ensure that data was returned. */
+        if ($data === false) {
+            throw new Exception('Invalid ID passed for video.');
+        }
+
+        return json_decode($data, true);
+    }
+
+    /**
      * Function to get an array of available videos given a project list.
      *
-     * @param array $projects An array of project IDs to look up.
+     * @param array $projects Optional - An array of project IDs to look up.
      *
      * @throws Exception If unable to get a list of projects from the API.
      * @throws Exception If unable to get a list of videos for a project.
@@ -793,19 +767,26 @@ HTML;
      * @access public
      * @return array
      */
-    public function getVideos($projects)
+    public function getVideos($projects = array())
     {
         /** Ensure that the passed parameter is an array. */
         if (!is_array($projects)) {
-            throw new Exception('Project parameter passed was invalid.', 4);
+            throw new Exception('Project parameter passed was invalid.');
         }
 
-        /** Try to filter projects and get project names. */
+        /** Filter project IDs by registered project IDs from the API. */
         try {
-            $projectNames = $this->getProjects();
-            $projects = array_intersect($projectNames, array_flip($projects));
+            /** Determine whether we are getting specific videos or all videos. */
+            if (count($projects) > 0) {
+                $projects = array_intersect_key(
+                    $this->getProjects(),
+                    array_flip($projects)
+                );
+            } else {
+                $projects = $this->getProjects();
+            }
         } catch (Exception $e) {
-            throw new Exception('Could not get a list of projects.', 5, $e);
+            throw new Exception('Could not get a list of projects.', 0, $e);
         }
 
         /** Add videos from each project. */
@@ -819,23 +800,26 @@ HTML;
 
             /** Ensure that the list was obtained. */
             if ($jsonData === false) {
-                throw new Exception('Could not get a list of videos.', 6);
+                throw new Exception('Could not get a list of videos.');
             }
 
+            /** Add this project. */
+            $videos[$id] = array('name' => $name);
+
             /** Add each video. */
-            $data = json_decode($jsonData);
+            $data = json_decode($jsonData, true);
             foreach ($data as $video) {
                 if (isset($video['id']) && isset($video['name'])) {
                     if (isset($video['section'])) {
-                        $videos[$name][$video['section']][$video['id']]
+                        $videos[$id]['sections'][$video['section']][$video['id']]
                             = $video['name'];
                     } else {
-                        $videos[$name][$video['id']] = $video['name'];
+                        $videos[$id]['videos'][$video['id']] = $video['name'];
                     }
                 }
             }
         }
-        ksort($videos);
+
         return $videos;
     }
 }
