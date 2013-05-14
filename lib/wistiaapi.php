@@ -109,21 +109,23 @@ class WistiaApi
     }
 
     /**
-     * Function to get an options array based on template tags and defaults.
+     * Function to get an options array based on parameters.
      *
-     * @param array $params  The parameters array created by EE for the tag.
-     * @param array $apiData The API data for this video.
+     * @param array $params A nested key-value pair of override parameters.
+     * @param array $video  The API data for this video.
      *
      * @access private
      * @return array   An array of options.
      */
-    private function _getOptions($params, $apiData)
+    private function _getOptions($params, $video)
     {
+        /** Ensure that passed parameters are an array. */
+        if (!is_array($params)) {
+            throw new Exception('Params must be in an array.');
+        }
+
         /** Set up container for options. */
         $options = array();
-
-        /** Lowercase keys in EE params array for matching. */
-        $params = array_change_key_case($params, CASE_LOWER);
 
         /** Load parameters for defaults and aliases. */
         $parameters = json_decode(
@@ -135,16 +137,8 @@ class WistiaApi
         foreach ($parameters as $groupName => $group) {
 
             /** Check for inclusion of this group. */
-            if ($groupName === 'socialbar' && !isset($params['socialbar'])) {
+            if (!isset($params[$groupName]) && $groupName !== 'general') {
                 continue;
-            } elseif ($groupName === 'ga') {
-                if (!isset($params['ga'])
-                    || $this->_sanitizeBool($params['ga'], false) !== true
-                    || !isset($params['type'])
-                    || $params['type'] !== 'api'
-                ) {
-                    continue;
-                }
             }
 
             /** Loop through parameters within this group. */
@@ -156,19 +150,10 @@ class WistiaApi
                 /** Get list of possible values, if provided. */
                 $opt = (isset($param['values'])) ? $param['values'] : '';
 
-                /** Transform the search key in special circumstances. */
-                if ($groupName === 'socialbar' && $name === 'buttons') {
-                    $paramName = 'socialbar';
-                } elseif ($groupName !== 'general') {
-                    $paramName = $groupName . ':' . $name;
-                } else {
-                    $paramName = $name;
-                }
-
                 /** Get the value from the parameters, or the default. */
                 $value = $this->_getParam(
-                    $paramName,
-                    $params,
+                    $name,
+                    $params[$groupName],
                     $param['type'],
                     $param['default'],
                     $aliases,
@@ -185,7 +170,7 @@ class WistiaApi
 
                 /** Handle dynamic values by adding API data. */
                 if ($groupName === 'ga' && $name === 'label' && $value === '') {
-                    $options[$groupName][$name] = $apiData['name'];
+                    $options[$groupName][$name] = $video['name'];
                 }
             }
 
@@ -198,7 +183,7 @@ class WistiaApi
         }
 
         /** Override SSL value if on an SSL connection to the server. */
-        if ($this->_valueOf('HTTPS', $_SERVER)) {
+        if (isset($_SERVER['HTTPS'])) {
             $options['general']['ssl'] = true;
         }
 
@@ -220,8 +205,9 @@ class WistiaApi
      */
     private function _getParam($key, $params, $type, $default, $aliases, $opt = '')
     {
-        /** Lowercase the key for matching keys in the array. */
+        /** Lowercase the keys for matching. */
         $key = strtolower($key);
+        $params = array_change_key_case($params, CASE_LOWER);
 
         /** Determine if a value was given. */
         if (!array_key_exists($key, $params)) {
@@ -614,68 +600,6 @@ HTML;
     }
 
     /**
-     * Embeds the video in an iframe.
-     *
-     * @param string $hashedId The hashed ID for use in calling embeds.
-     * @param array  $options  An associative array of the superembed options.
-     *
-     * @access private
-     * @return string  The HTML/JS for the embed.
-     */
-    private function _superEmbedIframe($hashedId, $options)
-    {
-        /** Add general options to the query array. */
-        $query = $options['general'];
-        $query['version'] = 'v1';
-
-        /** Add social bar options to the query array, if necessary. */
-        if (isset($options['socialbar'])) {
-            foreach ($options['socialbar'] as $option => $value) {
-                $key = 'plugin[socialbar-v1][' . $option . ']';
-                if ($option === 'buttons') {
-                    $value = implode('-', $value);
-                }
-                $query[$key] = $value;
-            }
-        }
-
-        /** Convert boolean values to string 'true' and 'false'. */
-        foreach ($query as $key => $value) {
-            if ($value === true) {
-                $query[$key] = 'true';
-            } elseif ($value === false) {
-                $query[$key] = 'false';
-            }
-        }
-
-        /** Build HTTP query for iframe URL. */
-        $query = str_replace('+', '%20', htmlentities(http_build_query($query)));
-
-        /** Construct dynamic iframe height parameter. */
-        $height = $options['general']['videoHeight'];
-        if (isset($options['socialbar'])) {
-            $height += 28;
-            if (count($options['socialbar']['buttons']) > 5) {
-                $height += 34;
-            }
-        }
-
-        /** Build iframe URL. */
-        $iUrl = ($options['general']['ssl']) ? 'https' : 'http';
-        $iUrl .= '://fast.wistia.net/embed/iframe/' . $hashedId . '?' . $query;
-        return <<<HTML
-<iframe src="{$iUrl}"
-    allowtransparency="true"
-    frameborder="0"
-    scrolling="no"
-    class="wistia_embed"
-    name="wistia_embed"
-    width="{$options['general']['videoWidth']}"
-    height="{$height}"></iframe>
-HTML;
-    }
-
-    /**
      * Function to safely return the value of an array.
      *
      * @param string $needle   The value to look for.
@@ -821,6 +745,89 @@ HTML;
         }
 
         return $videos;
+    }
+
+    /**
+     * Embeds the video in an iframe.
+     *
+     * @param string $id     The video ID.
+     * @param array  $params An associative array of option override parameters.
+     *
+     * @throws Exception If the params value is not an array.
+     *
+     * @access private
+     * @return string  The HTML/JS for the embed.
+     */
+    public function iframe($id, $params = array())
+    {
+        /** Verify that params is an array. */
+        if (!is_array($params)) {
+            throw new Exception('Params passed are not an array.');
+        }
+
+        /** Try to get video data. */
+        try {
+            $video = $this->getVideo($id);
+        } catch (Exception $e) {
+            throw $e;
+        }
+
+        /** Force the type parameter to iframe. */
+        $params['general']['type'] = 'iframe';
+
+        /** Get options array, given parameters. */
+        $options = $this->_getOptions($params, $video);
+
+        /** Add general options to the query array. */
+        $query = $options['general'];
+        $query['version'] = 'v1';
+
+        /** Add social bar options to the query array, if necessary. */
+        if (isset($options['socialbar'])) {
+            foreach ($options['socialbar'] as $option => $value) {
+                $key = 'plugin[socialbar-v1][' . $option . ']';
+                if ($option === 'buttons') {
+                    $value = implode('-', $value);
+                }
+                $query[$key] = $value;
+            }
+        }
+
+        /** Convert boolean values to string 'true' and 'false'. */
+        foreach ($query as $key => $value) {
+            if ($value === true) {
+                $query[$key] = 'true';
+            } elseif ($value === false) {
+                $query[$key] = 'false';
+            }
+        }
+
+        /** Build HTTP query for iframe URL. */
+        $query = str_replace('+', '%20', htmlentities(http_build_query($query)));
+
+        /** Construct dynamic iframe height parameter. */
+        $height = $options['general']['videoHeight'];
+        if (isset($options['socialbar'])) {
+            $height += 28;
+            if (count($options['socialbar']['buttons']) > 5) {
+                $height += 34;
+            }
+        }
+
+        /** Build iframe URL. */
+        $iUrl = ($options['general']['ssl']) ? 'https' : 'http';
+        $iUrl .= '://fast.wistia.net/embed/iframe/' . $video['hashed_id']
+            . '?' . $query;
+        return <<<HTML
+<iframe src="{$iUrl}"
+    allowtransparency="true"
+    frameborder="0"
+    scrolling="no"
+    class="wistia_embed"
+    name="wistia_embed"
+    width="{$options['general']['videoWidth']}"
+    height="{$height}"></iframe>
+HTML;
     }
 }
 
