@@ -187,6 +187,9 @@ class WistiaApi
             $options['general']['ssl'] = true;
         }
 
+        /** Set the API version number. */
+        $options['general']['version'] = 'v1';
+
         return $options;
     }
 
@@ -484,22 +487,54 @@ JS;
      */
     public function api($id, $params = array())
     {
-        /** Get supplemental blocks. */
-        $socialBar = $this->_seApiGetSocialBar($hashedId, $options);
-        $ga = $this->_seApiGetGoogleAnalytics($hashedId, $options);
+        /** Verify that params is an array. */
+        if (!is_array($params)) {
+            throw new Exception('Params passed are not an array.');
+        }
+
+        /** Try to get video data. */
+        try {
+            $video = $this->getVideo($id);
+        } catch (Exception $e) {
+            throw $e;
+        }
+
+        /** Force the type parameter to iframe. */
+        $params['general']['type'] = 'api';
+
+        /** Get options array, given parameters. */
+        $options = $this->_getOptions($params, $video);
 
         /** Builds JS URL. */
-        $jsUrl = ($options['ssl']) ? 'https' : 'http';
-        $jsUrl .= '://fast.wistia.com/static/concat/E-v1'
-            . '%2Csocialbar-v1%2CpostRoll-v1%2CrequireEmail-v1.js';
+        $jsUrl = (isset($options['ssl']) && $options['ssl']) ? 'https' : 'http';
+        $jsUrl .= '://fast.wistia.com/static/concat/E-v1';
+        if (isset($options['socialbar'])) {
+            $jsUrl .= '%2Csocialbar-v1';
+        }
+        if (isset($options['postroll'])) {
+            $jsUrl .= '%2CpostRoll-v1';
+        }
+        if (isset($options['requireemail'])) {
+            $jsUrl .= '%2CrequireEmail-v1';
+        }
+        $jsUrl .= '.js';
+
+        /** Create options JSON object for the embed. */
+        $jsonOptions = json_encode($options['general']);
+
+        /** Get socialbar and Google Analytics code. */
+        $socialBar = '';
+        $ga = '';
 
         /** Return rendered SuperEmbed template. */
+        $height = $options['general']['videoHeight'];
+        $width = $options['general']['videoWidth'];
         return <<<HTML
-<div id="wistia_{$hashedId}"
+<div id="wistia_{$video['hashed_id']}"
     class="wistia_embed"
-    style="width:{$options['videoWidth']}px;height:{$options['videoHeight']}px;"
-    data-video-width="{$options['videoWidth']}"
-    data-video-height="{$options['videoHeight']}">&nbsp;
+    style="width:{$width}px;height:{$height}px;"
+    data-video-width="{$width}"
+    data-video-height="{$height}">&nbsp;
 </div>
 <script>
   /** Load Wistia JS, if not already loaded. */
@@ -510,39 +545,26 @@ JS;
   }
 
   /** Function to initialize this video. */
-  function wistiaInit_{$hashedId}() {
+  function wistiaInit_{$video['hashed_id']}() {
     /** Check to see if the Wistia lib is loaded. Else, wait 100ms and try again. */
     if (typeof Wistia === 'undefined') {
-        setTimeout(wistiaInit_{$hashedId}, 100);
+        setTimeout(wistiaInit_{$video['hashed_id']}, 100);
         return;
     }
 
     /** Process the embed. */
-    wistiaEmbed_{$hashedId} = Wistia.embed("{$hashedId}", {
-      version: "v1",
-      videoWidth: {$options['videoWidth']},
-      videoHeight: {$options['videoHeight']},
-      playButton: {$options['playButton']},
-      smallPlayButton: {$options['smallPlayButton']},
-      playbar: {$options['playbar']},
-      volumeControl: {$options['volumeControl']},
-      fullscreenButton: {$options['fullscreenButton']},
-      controlsVisibleOnLoad: {$options['controlsVisibleOnLoad']},
-      playerColor: '{$options['playerColor']}',
-      autoPlay: {$options['autoPlay']},
-      endVideoBehavior: '{$options['endVideoBehavior']}',
-      videoFoam: '{$options['videoFoam']}'
-    });
+    wistiaEmbed_{$video['hashed_id']}
+        = Wistia.embed("{$video['hashed_id']}", {$jsonOptions});
     {$socialBar}
     {$ga}
   }
 
   /** Call up the function to initialize this video. */
-  wistiaInit_{$hashedId}();
+  wistiaInit_{$video['hashed_id']}();
 
   /** Add a function to remove the video completely. */
   function removeThisVideo() {
-    wistiaEmbed_{$hashedId}.remove();
+    wistiaEmbed_{$video['hashed_id']}.remove();
   }
 </script>
 HTML;
@@ -713,7 +735,6 @@ HTML;
 
         /** Add general options to the query array. */
         $query = $options['general'];
-        $query['version'] = 'v1';
 
         /** Add social bar options to the query array, if necessary. */
         if (isset($options['socialbar'])) {
