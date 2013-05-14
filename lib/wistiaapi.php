@@ -71,44 +71,6 @@ class WistiaApi
     }
 
     /**
-     * Function to fix a relative URL and turn it into an absolute URL.
-     *
-     * @param string $url The URL to modify.
-     *
-     * @access private
-     * @return string  The adjusted URL.
-     */
-    private function _adjustUrl($url)
-    {
-        /** Determine if URL is empty. */
-        if (strlen($url) == 0) {
-            return '';
-        }
-
-        /** Determine if URL is already absolute. */
-        if (strstr($url, '://')) {
-            return $url;
-        }
-
-        /** Construct dynamic base URL. */
-        $http = (isset($_SERVER['HTTPS'])) ? 'https://' : 'http://';
-        $baseUrl = $http . $_SERVER['SERVER_NAME'];
-
-        /** Look for leading slash to set relative to this page or server root. */
-        if (substr($url, 0, 1) == '/') {
-            return $baseUrl . $url;
-        }
-
-        /** Otherwise, append to existing page. */
-        $baseUrl .= $_SERVER['REQUEST_URI'];
-        if (substr($baseUrl, -1) != '/') {
-            $baseUrl .= '/';
-        }
-
-        return $baseUrl . $url;
-    }
-
-    /**
      * Function to return the Google Analytics tracking code script, if needed.
      *
      * @param string $hashedId The hashed ID for the video.
@@ -344,7 +306,7 @@ JAVASCRIPT;
             $value = $this->_sanitizeMultiSelect($value, $default, $opt);
             break;
         case 'url':
-            $value = $this->_adjustUrl($value);
+            $value = $this->_sanitizeUrl($value, $default);
             break;
         }
 
@@ -490,6 +452,49 @@ JAVASCRIPT;
 
         /** Check for empty set and return. */
         return (count($values) === 0) ? $default : $values;
+    }
+
+    /**
+     * Function to adjust and verify a URL.
+     *
+     * @param string $value   The URL to modify and validate.
+     * @param string $default The default value to use.
+     *
+     * @access private
+     * @return string  The adjusted URL.
+     */
+    private function _sanitizeUrl($value, $default)
+    {
+        /** Determine if URL is empty. */
+        if (strlen($value) === 0) {
+            return $default;
+        }
+
+        /** Determine if URL is already absolute. */
+        if (!strstr($value, '://')) {
+
+            /** Construct dynamic base URL. */
+            $http = (isset($_SERVER['HTTPS'])) ? 'https://' : 'http://';
+            $baseUrl = $http . $_SERVER['SERVER_NAME'];
+
+            /** Look for leading slash to set relative to this page or root. */
+            if (substr($value, 0, 1) === '/') {
+                $value = $baseUrl . $value;
+            } else {
+                $baseUrl .= $_SERVER['REQUEST_URI'];
+                if (substr($baseUrl, -1) != '/') {
+                    $baseUrl .= '/';
+                }
+                $value = $baseUrl . $value;
+            }
+        }
+
+        /** Check to see if the URL is valid. */
+        if (filter_var($value, FILTER_VALIDATE_URL) === false) {
+            return $default;
+        }
+
+        return $value;
     }
 
     /**
