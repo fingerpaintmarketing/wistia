@@ -160,6 +160,43 @@ class Wistia_FT extends EE_Fieldtype
     }
 
     /**
+     * Function to replace any tag with a modifier with associated API data.
+     *
+     * @param array  $data     Tag data from the database.
+     * @param array  $params   Parameters from the tag.
+     * @param bool   $tagdata  The markup between the tag pairs.
+     * @param string $modifier The modifier text after the tag.
+     *
+     * @access public
+     * @return string The rendered HTML.
+     */
+    private function _replaceTagCatchall($data, $params, $tagdata, $modifier)
+    {
+        /** Lowercase params. */
+        $params = array_change_key_case($params, CASE_LOWER);
+
+        /** Try to get API data. */
+        try {
+            $apiData = $this->_getApiData('video', $data);
+        } catch (Exception $e) {
+            $this->_logException($e);
+            return false;
+        }
+
+        /** Extract tag from data array. */
+        $val = $this->_valueOf($modifier, $apiData);
+
+        /** Run striptags, if requested. */
+        if ($this->_valueOf('striptags', $params) == 'true') {
+            $val = strip_tags($val);
+            $val = htmlentities($val, ENT_QUOTES, 'UTF-8', false);
+            $val = trim($val);
+        }
+
+        return $val;
+    }
+
+    /**
      * Function to return the API object.
      *
      * @throws Exception If the API object was not able to be created.

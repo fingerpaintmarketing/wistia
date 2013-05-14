@@ -91,8 +91,8 @@ class WistiaApi
         }
 
         /** Construct dynamic base URL. */
-        $http = ($this->_valueOf('HTTPS', $_SERVER)) ? 'https://' : 'http://';
-        $baseUrl = $http . $_SERVER['HTTP_HOST'];
+        $http = (isset($_SERVER['HTTPS'])) ? 'https://' : 'http://';
+        $baseUrl = $http . $_SERVER['SERVER_NAME'];
 
         /** Look for leading slash to set relative to this page or server root. */
         if (substr($url, 0, 1) == '/') {
@@ -252,43 +252,6 @@ class WistiaApi
         }
 
         return $value;
-    }
-
-    /**
-     * Function to replace any tag with a modifier with associated API data.
-     *
-     * @param array  $data     Tag data from the database.
-     * @param array  $params   Parameters from the tag.
-     * @param bool   $tagdata  The markup between the tag pairs.
-     * @param string $modifier The modifier text after the tag.
-     *
-     * @access public
-     * @return string The rendered HTML.
-     */
-    private function _replaceTagCatchall($data, $params, $tagdata, $modifier)
-    {
-        /** Lowercase params. */
-        $params = array_change_key_case($params, CASE_LOWER);
-
-        /** Try to get API data. */
-        try {
-            $apiData = $this->_getApiData('video', $data);
-        } catch (Exception $e) {
-            $this->_logException($e);
-            return false;
-        }
-
-        /** Extract tag from data array. */
-        $val = $this->_valueOf($modifier, $apiData);
-
-        /** Run striptags, if requested. */
-        if ($this->_valueOf('striptags', $params) == 'true') {
-            $val = strip_tags($val);
-            $val = htmlentities($val, ENT_QUOTES, 'UTF-8', false);
-            $val = trim($val);
-        }
-
-        return $val;
     }
 
     /**
@@ -511,13 +474,15 @@ JS;
     /**
      * Embeds the video as a JS API embed.
      *
-     * @param string $hashedId The hashed ID for use in calling embeds.
-     * @param array  $options  An associative array of the superembed options.
+     * @param string $id     The video ID.
+     * @param array  $params An associative array of option override parameters.
      *
-     * @access private
-     * @return string  The HTML/JS for the embed.
+     * @throws Exception If the params value is not an array.
+     *
+     * @access public
+     * @return string The HTML/JS for the embed.
      */
-    private function _superEmbedApi($hashedId, $options)
+    public function api($id, $params = array())
     {
         /** Get supplemental blocks. */
         $socialBar = $this->_seApiGetSocialBar($hashedId, $options);
@@ -581,38 +546,6 @@ JS;
   }
 </script>
 HTML;
-    }
-
-    /**
-     * Embeds the video as a popover.
-     *
-     * @param string $hashedId The hashed ID for use in calling embeds.
-     * @param array  $options  An associative array of the superembed options.
-     *
-     * @access private
-     * @return string  The HTML/JS for the embed.
-     */
-    private function _superEmbedPopover($hashedId, $options)
-    {
-        return <<<HTML
-'popover'
-HTML;
-    }
-
-    /**
-     * Function to safely return the value of an array.
-     *
-     * @param string $needle   The value to look for.
-     * @param array  $haystack The array to search in.
-     *
-     * @return mixed False on failure, or the array at position $needle.
-     */
-    private function _valueOf($needle, $haystack)
-    {
-        if (!array_key_exists($needle, $haystack)) {
-            return false;
-        }
-        return $haystack[$needle];
     }
 
     /**
@@ -755,8 +688,8 @@ HTML;
      *
      * @throws Exception If the params value is not an array.
      *
-     * @access private
-     * @return string  The HTML/JS for the embed.
+     * @access public
+     * @return string The HTML/JS for the embed.
      */
     public function iframe($id, $params = array())
     {
@@ -828,6 +761,22 @@ HTML;
     width="{$options['general']['videoWidth']}"
     height="{$height}"></iframe>
 HTML;
+    }
+
+    /**
+     * Embeds the video as a popover.
+     *
+     * @param string $id     The video ID.
+     * @param array  $params An associative array of option override parameters.
+     *
+     * @throws Exception If the params value is not an array.
+     *
+     * @access public
+     * @return string The HTML/JS for the embed.
+     */
+    public function popover($id, $params = array())
+    {
+        return 'popover';
     }
 }
 
