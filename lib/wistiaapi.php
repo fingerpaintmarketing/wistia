@@ -180,28 +180,26 @@ HTML;
      */
     private function _apiGetSocialBar($hashedId, $options)
     {
-        return;
-        if ($options['socialbar']['enabled']) {
-            $badgeUrl = ($options['socialbar']['badgeurl'])
-                ? ', logo: true, badgeUrl: "'
-                    . $options['socialbar']['badgeurl'] . '"'
-                : '';
-            $badgeImage = ($options['socialbar']['badgeimage'])
-                ? ', badgeImage: "' . $options['socialbar']['badgeimage'] . '"'
-                : '';
-            $pageUrl = ($options['socialbar']['pageurl'])
-                ? ', pageUrl: "' . $options['socialbar']['pageurl'] . '"'
-                : '';
-
-            return <<<JS
-Wistia.plugin.socialbar(wistiaEmbed_{$hashedId}, {
-  version: "v1",
-  buttons: "{$options['socialbar']['buttons']}"{$badgeUrl}{$badgeImage}{$pageUrl}
-});
-JS;
-        } else {
-            return '';
+        /** Check to see if the social bar should be included. */
+        if (!isset($options['socialbar']['buttons'])) {
+            return;
         }
+
+        /** Transform buttons from array to dash syntax. */
+        $options['socialbar']['buttons'] = implode(
+            '-',
+            $options['socialbar']['buttons']
+        );
+
+        /** Crunch socialbar options into a JSON object for inclusion in the call. */
+        $jsonOptions = json_encode($options['socialbar']);
+
+        return <<<JAVASCRIPT
+
+    /** Add the social sharing bar. */
+    Wistia.plugin.socialbar(wistiaEmbed_{$hashedId}, {$jsonOptions});
+
+JAVASCRIPT;
     }
 
     /**
