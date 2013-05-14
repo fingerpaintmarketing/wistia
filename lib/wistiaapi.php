@@ -155,14 +155,17 @@ class WistiaApi
         $endAction  = json_encode($endAction);
 
         return <<<HTML
-function ga_{$hashedId}() {
-  _gaq.push({$playAction});
-  wistiaEmbed_{$hashedId}.unbind('play', ga_{$hashedId});
-}
-wistiaEmbed_{$hashedId}.bind('play', ga_{$hashedId});
-wistiaEmbed_{$hashedId}.bind('end', function () {
-  _gaq.push({$endAction});
-});
+
+    /** Add Google Analytics support. */
+    function ga_{$hashedId}() {
+      _gaq.push({$playAction});
+      wistiaEmbed_{$hashedId}.unbind('play', ga_{$hashedId});
+    }
+    wistiaEmbed_{$hashedId}.bind('play', ga_{$hashedId});
+    wistiaEmbed_{$hashedId}.bind('end', function () {
+      _gaq.push({$endAction});
+    });
+
 HTML;
     }
 
@@ -572,17 +575,10 @@ JS;
     /** Process the embed. */
     wistiaEmbed_{$video['hashed_id']}
         = Wistia.embed("{$video['hashed_id']}", {$jsonOptions});
-    {$socialBar}
-    {$ga}
-  }
+{$socialBar}{$ga}  }
 
   /** Call up the function to initialize this video. */
   wistiaInit_{$video['hashed_id']}();
-
-  /** Add a function to remove the video completely. */
-  function removeThisVideo() {
-    wistiaEmbed_{$video['hashed_id']}.remove();
-  }
 </script>
 HTML;
     }
