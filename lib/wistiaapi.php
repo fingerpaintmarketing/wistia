@@ -902,16 +902,32 @@ HTML;
             'image_play_button' => 'true',
             'image_crop_resized' => '150x86', // thumb width and height
         );
+
+        /** Override image dimensions, if provided. */
+        if (isset($options['popover']['thumbnailHeight'])
+            && isset($options['popover']['thumbnailWidth'])
+        ) {
+            $tQuery['image_crop_resized'] = $options['popover']['thumbnailWidth']
+                . 'x' . $options['popover']['thumbnailHeight'];
+        }
+
+        /** Compile the thumbnail options into a query string. */
         $tQuery = str_replace('+', '%20', htmlentities(http_build_query($tQuery)));
 
-        /** Return rendered SuperEmbed template. */
+        /** Compile parameters for the embed. */
         $height = $options['general']['videoHeight'];
         $width = $options['general']['videoWidth'];
-        $thumbnailUrl = $video['thumbnail']['url'];
+        $thumbnailUrl = substr(
+            $video['thumbnail']['url'],
+            0,
+            strpos($video['thumbnail']['url'], '?')
+        );
+
+        /** Return rendered SuperEmbed template. */
         return <<<HTML
 <a href="http://fast.wistia.net/embed/iframe/{$video['hashed_id']}?{$query}"
   class="wistia-popover[height={$height},width={$width}]"><img
-  src="{$thumbnailUrl}" alt="" /></a>
+  src="{$thumbnailUrl}?{$tQuery}" alt="" /></a>
 <script charset="ISO-8859-1">
 {$includeScripts}
   WistiaLoader.ready();
