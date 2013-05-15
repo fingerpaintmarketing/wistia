@@ -165,6 +165,54 @@ JAVASCRIPT;
     }
 
     /**
+     * A function to get the JavaScript to dynamically include Wistia scripts.
+     *
+     * @param array $options The options array to use to determine which to include.
+     *
+     * @access private
+     * @return string  The JavaScript to use.
+     */
+    private function _getIncludeScripts($options)
+    {
+        /** Initialize the list of scripts to include. */
+        $scripts = array();
+
+        /** Build base URL with dynamic http/https. */
+        $baseUrl = (isset($options['ssl']) && $options['ssl']) ? 'https' : 'http';
+        $baseUrl .= '://fast.wistia.com/static/';
+
+        /** Add base JS file based on type. */
+        if ($options['general']['type'] === 'api') {
+            $scripts[] = $baseUrl . 'E-v1.js';
+        } elseif ($options['general']['type'] === 'popover') {
+            $scripts[] = $baseUrl . 'popover-v1.js';
+        }
+
+        /** Add social bar script. */
+        if (isset($options['socialbar'])) {
+            $scripts[] = $baseUrl . 'socialbar-v1.js';
+        }
+
+        /** Add post-roll script. */
+        if (isset($options['postroll'])) {
+            $scripts[] = $baseUrl . 'postRoll-v1.js';
+        }
+
+        /** Add require-email script. */
+        if (isset($options['requireemail'])) {
+            $scripts[] = $baseUrl . 'requireEmail-v1.js';
+        }
+
+        /** Return JavaScript block. */
+        $scripts = json_encode($scripts);
+        return <<<JAVASCRIPT
+  /** Conditionally include required scripts. */
+  WistiaLoader.addScripts({$scripts});
+
+JAVASCRIPT;
+    }
+
+    /**
      * Function to get an options array based on parameters.
      *
      * @param array $params A nested key-value pair of override parameters.
@@ -529,18 +577,7 @@ JAVASCRIPT;
         $options = $this->_getOptions($params, $video);
 
         /** Builds JS URL. */
-        $jsUrl = (isset($options['ssl']) && $options['ssl']) ? 'https' : 'http';
-        $jsUrl .= '://fast.wistia.com/static/concat/E-v1';
-        if (isset($options['socialbar'])) {
-            $jsUrl .= '%2Csocialbar-v1';
-        }
-        if (isset($options['postroll'])) {
-            $jsUrl .= '%2CpostRoll-v1';
-        }
-        if (isset($options['requireemail'])) {
-            $jsUrl .= '%2CrequireEmail-v1';
-        }
-        $jsUrl .= '.js';
+        $includeScripts = $this->_getIncludeScripts($options);
 
         /** Create options JSON object for the embed. */
         $jsonOptions = json_encode($options['general']);
@@ -560,17 +597,12 @@ JAVASCRIPT;
     data-video-height="{$height}">&nbsp;
 </div>
 <script>
-  /** Load Wistia JS, if not already loaded. */
-  if (typeof wistiaScript === 'undefined') {
-    var wistiaScript = document.createElement('script');
-    wistiaScript.src = '{$jsUrl}';
-    document.getElementsByTagName('head')[0].appendChild(wistiaScript);
-  }
+{$includeScripts}
 
   /** Function to initialize this video. */
   function wistiaInit_{$video['hashed_id']}() {
     /** Check to see if the Wistia lib is loaded. Else, wait 100ms and try again. */
-    if (typeof Wistia === 'undefined') {
+    if (!WistiaLoader.ready()) {
         setTimeout(wistiaInit_{$video['hashed_id']}, 100);
         return;
     }
