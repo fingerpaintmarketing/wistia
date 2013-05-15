@@ -294,6 +294,11 @@ JAVASCRIPT;
         /** Set the API version number. */
         $options['general']['version'] = 'v1';
 
+        /** If the type is popover, add popover element to general array. */
+        if ($options['general']['type'] === 'popover') {
+            $options['general']['popover'] = true;
+        }
+
         return $options;
     }
 
@@ -845,7 +850,73 @@ HTML;
      */
     public function popover($id, $params = array())
     {
-        return 'popover';
+        /** Verify that params is an array. */
+        if (!is_array($params)) {
+            throw new Exception('Params passed are not an array.');
+        }
+
+        /** Try to get video data. */
+        try {
+            $video = $this->getVideo($id);
+        } catch (Exception $e) {
+            throw $e;
+        }
+
+        /** Force the type parameter to popover. */
+        $params['general']['type'] = 'popover';
+
+        /** Get options array, given parameters. */
+        $options = $this->_getOptions($params, $video);
+
+        /** Builds JS URL. */
+        $includeScripts = $this->_getIncludeScripts($options);
+
+        /** Add general options to the query array. */
+        $query = $options['general'];
+
+        /** Add social bar options to the query array, if necessary. */
+        if (isset($options['socialbar'])) {
+            foreach ($options['socialbar'] as $option => $value) {
+                $key = 'plugin[socialbar-v1][' . $option . ']';
+                if ($option === 'buttons') {
+                    $value = implode('-', $value);
+                }
+                $query[$key] = $value;
+            }
+        }
+
+        /** Convert boolean values to string 'true' and 'false'. */
+        foreach ($query as $key => $value) {
+            if ($value === true) {
+                $query[$key] = 'true';
+            } elseif ($value === false) {
+                $query[$key] = 'false';
+            }
+        }
+
+        /** Build HTTP query for HREF. */
+        $query = str_replace('+', '%20', htmlentities(http_build_query($query)));
+
+        /** Add options to the thumbnail image query. */
+        $tQuery = array(
+            'image_play_button' => 'true',
+            'image_crop_resized' => '150x86', // thumb width and height
+        );
+        $tQuery = str_replace('+', '%20', htmlentities(http_build_query($tQuery)));
+
+        /** Return rendered SuperEmbed template. */
+        $height = $options['general']['videoHeight'];
+        $width = $options['general']['videoWidth'];
+        $thumbnailUrl = $video['thumbnail']['url'];
+        return <<<HTML
+<a href="http://fast.wistia.net/embed/iframe/{$video['hashed_id']}?{$query}"
+  class="wistia-popover[height={$height},width={$width}]"><img
+  src="{$thumbnailUrl}" alt="" /></a>
+<script charset="ISO-8859-1">
+{$includeScripts}
+  WistiaLoader.ready();
+</script>
+HTML;
     }
 }
 
