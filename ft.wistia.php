@@ -340,6 +340,11 @@ class Wistia_FT extends EE_Fieldtype
      */
     private function _logException($e)
     {
+        /* Determine if the developer log is available. */
+        if (!method_exists($this->EE->logger, 'developer')) {
+            return;
+        }
+        
         /* Log the exception to the developer log. */
         $message = '';
         do {
